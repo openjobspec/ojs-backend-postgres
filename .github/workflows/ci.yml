@@ -1,0 +1,72 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.22"
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v6
+        with:
+          version: latest
+
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: ojs
+          POSTGRES_PASSWORD: ojs
+          POSTGRES_DB: ojs
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U ojs"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      DATABASE_URL: postgres://ojs:ojs@localhost:5432/ojs?sslmode=disable
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.22"
+      - name: Run tests
+        run: go test ./... -race -cover -coverprofile=coverage.out
+      - name: Enforce minimum coverage
+        run: |
+          go tool cover -func=coverage.out | awk -v min=20 '/^total:/ { gsub("%","",$3); if ($3 < min) { printf "Coverage %.1f%% is below %.1f%%\n", $3, min; exit 1 } }'
+      - name: Upload coverage
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage
+          path: coverage.out
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.22"
+      - name: Build
+        run: go build -o bin/ojs-server ./cmd/ojs-server
+      - name: Verify binary
+        run: ls -la bin/ojs-server

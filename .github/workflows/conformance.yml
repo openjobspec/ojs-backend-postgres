@@ -1,0 +1,102 @@
+name: Conformance
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  conformance:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: ojs
+          POSTGRES_PASSWORD: ojs
+          POSTGRES_DB: ojs
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U ojs"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: ojs-backend-postgres
+
+      - uses: actions/checkout@v4
+        with:
+          repository: openjobspec/ojs-conformance
+          path: ojs-conformance
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: ojs-backend-postgres/go.mod
+
+      - name: Build server
+        working-directory: ojs-backend-postgres
+        run: go build -o bin/ojs-server ./cmd/ojs-server
+
+      - name: Build conformance runner
+        working-directory: ojs-conformance
+        run: go build -o bin/ojs-conformance ./runner/http/
+
+      - name: Start server
+        working-directory: ojs-backend-postgres
+        run: |
+          DATABASE_URL=postgres://ojs:ojs@localhost:5432/ojs?sslmode=disable ./bin/ojs-server &
+          sleep 3
+          curl -sf http://localhost:8080/ojs/v1/health
+
+      - name: Run conformance tests
+        id: conformance
+        run: |
+          set +e
+          OUTPUT=$(ojs-conformance/bin/ojs-conformance \
+            -url http://localhost:8080 \
+            -suites ojs-conformance/suites 2>&1)
+          EXIT_CODE=$?
+          echo "$OUTPUT"
+          echo "exit_code=$EXIT_CODE" >> "$GITHUB_OUTPUT"
+
+          LEVEL="none"
+          for L in 0 1 2 3 4; do
+            if echo "$OUTPUT" | grep -q "Level ${L}.*PASS\|level-${L}.*PASS\|Level${L}.*PASS"; then
+              LEVEL="$L"
+            fi
+          done
+          if [ "$EXIT_CODE" -eq 0 ]; then
+            LEVEL="4"
+          fi
+          echo "level=$LEVEL" >> "$GITHUB_OUTPUT"
+          exit $EXIT_CODE
+
+      - name: Generate conformance badge
+        if: github.ref == 'refs/heads/main' && always()
+        run: |
+          LEVEL="${{ steps.conformance.outputs.level }}"
+          if [ "$LEVEL" = "none" ]; then
+            COLOR="red"
+            LABEL="failing"
+          else
+            COLOR="brightgreen"
+            LABEL="Level%20${LEVEL}"
+          fi
+          mkdir -p ojs-backend-postgres/.github/badges
+          curl -s "https://img.shields.io/badge/OJS%20Conformance-${LABEL}-${COLOR}" \
+            -o ojs-backend-postgres/.github/badges/conformance.svg
+
+      - name: Commit badge
+        if: github.ref == 'refs/heads/main' && always()
+        working-directory: ojs-backend-postgres
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add .github/badges/conformance.svg 2>/dev/null || true
+          git diff --cached --quiet || git commit -m "chore: update conformance badge [skip ci]"
+          git push || true
