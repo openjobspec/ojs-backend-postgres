@@ -59,7 +59,7 @@ func CalculateBackoff(policy *RetryPolicy, attempt int) time.Duration {
 
 	// Apply jitter (0.5x to 1.5x)
 	if policy.Jitter {
-		jitterFactor := 0.5 + rand.Float64() // 0.5 to 1.5
+		jitterFactor := 0.5 + rand.Float64() //nolint:gosec // jitter doesn't need crypto randomness
 		result = time.Duration(float64(result) * jitterFactor)
 	}
 

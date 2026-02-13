@@ -2,12 +2,12 @@ package main
 
 import (
 	"context"
-	"log"
+	"log/slog"
 	"net/http"
+	"net/url"
 	"os"
 	"os/signal"
 	"syscall"
-	"time"
 
 	pgbackend "github.com/openjobspec/ojs-backend-postgres/internal/postgres"
 	"github.com/openjobspec/ojs-backend-postgres/internal/scheduler"
@@ -18,34 +18,49 @@ func main() {
 	cfg := server.LoadConfig()
 
 	// Connect to Postgres
-	backend, err := pgbackend.New(cfg.DatabaseURL)
+	backend, err := pgbackend.New(cfg.DatabaseURL, func(bc *pgbackend.BackendConfig) {
+		bc.PoolMinConns = cfg.PoolMinConns
+		bc.PoolMaxConns = cfg.PoolMaxConns
+		bc.DefaultVisibilityTimeoutMs = cfg.DefaultVisibilityTimeoutMs
+		bc.RetentionCompletedDays = cfg.RetentionCompletedDays
+		bc.RetentionDiscardedDays = cfg.RetentionDiscardedDays
+	})
 	if err != nil {
-		log.Fatalf("Failed to connect to Postgres: %v", err)
+		slog.Error("failed to connect to Postgres", "error", err)
+		os.Exit(1)
 	}
-	defer backend.Close()
+	defer func() { _ = backend.Close() }()
 
-	log.Printf("Connected to Postgres at %s", cfg.DatabaseURL)
+	slog.Info("connected to Postgres", "url", redactDatabaseURL(cfg.DatabaseURL))
 
 	// Start background scheduler
-	sched := scheduler.New(backend)
+	schedCfg := scheduler.Config{
+		PromoteInterval: cfg.SchedulerPromoteInterval,
+		RetryInterval:   cfg.SchedulerRetryInterval,
+		ReaperInterval:  cfg.SchedulerReaperInterval,
+		CronInterval:    cfg.SchedulerCronInterval,
+		PrunerInterval:  cfg.SchedulerPrunerInterval,
+	}
+	sched := scheduler.New(backend, schedCfg)
 	sched.Start()
 	defer sched.Stop()
 
 	// Create HTTP server
-	router := server.NewRouter(backend)
+	router := server.NewRouter(backend, cfg)
 	srv := &http.Server{
 		Addr:         ":" + cfg.Port,
 		Handler:      router,
-		ReadTimeout:  30 * time.Second,
-		WriteTimeout: 30 * time.Second,
-		IdleTimeout:  120 * time.Second,
+		ReadTimeout:  cfg.ReadTimeout,
+		WriteTimeout: cfg.WriteTimeout,
+		IdleTimeout:  cfg.IdleTimeout,
 	}
 
 	// Start server
 	go func() {
-		log.Printf("OJS server listening on :%s", cfg.Port)
+		slog.Info("OJS server listening", "port", cfg.Port)
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			log.Fatalf("Server error: %v", err)
+			slog.Error("server error", "error", err)
+			os.Exit(1)
 		}
 	}()
 
@@ -54,15 +69,28 @@ func main() {
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	<-quit
 
-	log.Println("Shutting down...")
-	sched.Stop()
+	slog.Info("shutting down...")
 
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), cfg.ShutdownTimeout)
 	defer cancel()
 
 	if err := srv.Shutdown(ctx); err != nil {
-		log.Printf("Server shutdown error: %v", err)
+		slog.Error("server shutdown error", "error", err)
 	}
 
-	log.Println("Server stopped")
+	slog.Info("server stopped")
+}
+
+// redactDatabaseURL masks the password in a PostgreSQL connection URL.
+func redactDatabaseURL(raw string) string {
+	u, err := url.Parse(raw)
+	if err != nil {
+		return "***"
+	}
+	if u.User != nil {
+		if _, hasPassword := u.User.Password(); hasPassword {
+			u.User = url.UserPassword(u.User.Username(), "***")
+		}
+	}
+	return u.String()
 }

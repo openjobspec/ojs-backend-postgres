@@ -8,8 +8,8 @@ type RetryPolicy struct {
 	MaxInterval        string   `json:"max_interval,omitempty"`
 	Jitter             bool     `json:"jitter,omitempty"`
 	NonRetryableErrors []string `json:"non_retryable_errors,omitempty"`
-	OnExhaustion       string   `json:"on_exhaustion,omitempty"`  // "discard" or "dead_letter"
-	BackoffType        string   `json:"backoff_type,omitempty"`   // "exponential", "linear", "constant"
+	OnExhaustion       string   `json:"on_exhaustion,omitempty"`    // "discard" or "dead_letter"
+	BackoffType        string   `json:"backoff_type,omitempty"`     // "exponential", "linear", "constant"
 	BackoffStrategy    string   `json:"backoff_strategy,omitempty"` // alias for backoff_type
 }
 

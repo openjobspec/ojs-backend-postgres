@@ -5,61 +5,73 @@ import (
 	"encoding/json"
 )
 
-// Backend defines the interface for OJS backend implementations.
-type Backend interface {
-	// Push enqueues a job.
+// JobManager handles core job lifecycle operations.
+type JobManager interface {
 	Push(ctx context.Context, job *Job) (*Job, error)
-
-	// Fetch claims jobs from the specified queues.
-	Fetch(ctx context.Context, queues []string, count int, workerID string, visibilityTimeoutMs int) ([]*Job, error)
-
-	// Ack acknowledges a job as completed.
-	Ack(ctx context.Context, jobID string, result []byte) (*AckResponse, error)
-
-	// Nack reports a job failure.
-	Nack(ctx context.Context, jobID string, jobErr *JobError, requeue bool) (*NackResponse, error)
-
-	// Info retrieves job details.
+	PushBatch(ctx context.Context, jobs []*Job) ([]*Job, error)
 	Info(ctx context.Context, jobID string) (*Job, error)
-
-	// Cancel cancels a job.
 	Cancel(ctx context.Context, jobID string) (*Job, error)
+}
 
-	// ListQueues returns all known queues.
-	ListQueues(ctx context.Context) ([]QueueInfo, error)
-
-	// Health returns the health status.
-	Health(ctx context.Context) (*HealthResponse, error)
-
-	// Heartbeat extends visibility and reports worker state.
+// WorkerManager handles worker-side operations (fetch, ack, nack, heartbeat).
+type WorkerManager interface {
+	Fetch(ctx context.Context, queues []string, count int, workerID string, visibilityTimeoutMs int) ([]*Job, error)
+	Ack(ctx context.Context, jobID string, result []byte) (*AckResponse, error)
+	Nack(ctx context.Context, jobID string, jobErr *JobError, requeue bool) (*NackResponse, error)
 	Heartbeat(ctx context.Context, workerID string, activeJobs []string, visibilityTimeoutMs int) (*HeartbeatResponse, error)
+	SetWorkerState(ctx context.Context, workerID string, state string) error
+}
 
-	// Dead letter operations
+// QueueManager handles queue-level operations.
+type QueueManager interface {
+	ListQueues(ctx context.Context) ([]QueueInfo, error)
+	QueueStats(ctx context.Context, name string) (*QueueStats, error)
+	PauseQueue(ctx context.Context, name string) error
+	ResumeQueue(ctx context.Context, name string) error
+}
+
+// DeadLetterManager handles dead letter queue operations.
+type DeadLetterManager interface {
 	ListDeadLetter(ctx context.Context, limit, offset int) ([]*Job, int, error)
 	RetryDeadLetter(ctx context.Context, jobID string) (*Job, error)
 	DeleteDeadLetter(ctx context.Context, jobID string) error
+}
 
-	// Cron operations
+// CronManager handles cron job operations.
+type CronManager interface {
 	RegisterCron(ctx context.Context, cron *CronJob) (*CronJob, error)
 	ListCron(ctx context.Context) ([]*CronJob, error)
 	DeleteCron(ctx context.Context, name string) (*CronJob, error)
+}
 
-	// Workflow operations
+// WorkflowManager handles workflow operations.
+type WorkflowManager interface {
 	CreateWorkflow(ctx context.Context, req *WorkflowRequest) (*Workflow, error)
 	GetWorkflow(ctx context.Context, id string) (*Workflow, error)
 	CancelWorkflow(ctx context.Context, id string) (*Workflow, error)
 	AdvanceWorkflow(ctx context.Context, workflowID string, jobID string, result json.RawMessage, failed bool) error
+}
 
-	// Batch enqueue
-	PushBatch(ctx context.Context, jobs []*Job) ([]*Job, error)
+// Subscriber provides real-time push notifications for job availability.
+type Subscriber interface {
+	// Subscribe returns a channel that emits queue names when jobs become available.
+	// The cancel function must be called to unsubscribe.
+	Subscribe(queues []string) (events <-chan string, cancel func())
+}
 
-	// Queue operations
-	QueueStats(ctx context.Context, name string) (*QueueStats, error)
-	PauseQueue(ctx context.Context, name string) error
-	ResumeQueue(ctx context.Context, name string) error
+// Backend defines the full interface for OJS backend implementations,
+// composing all role-specific interfaces.
+type Backend interface {
+	JobManager
+	WorkerManager
+	QueueManager
+	DeadLetterManager
+	CronManager
+	WorkflowManager
+	Subscriber
 
-	// SetWorkerState sets a directive for a worker.
-	SetWorkerState(ctx context.Context, workerID string, state string) error
+	// Health returns the health status.
+	Health(ctx context.Context) (*HealthResponse, error)
 
 	// Close closes the backend connection.
 	Close() error

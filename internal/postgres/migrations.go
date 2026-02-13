@@ -4,7 +4,7 @@ import (
 	"context"
 	"embed"
 	"fmt"
-	"log"
+	"log/slog"
 	"sort"
 	"strings"
 
@@ -66,12 +66,12 @@ func RunMigrations(ctx context.Context, pool *pgxpool.Pool) error {
 		}
 
 		if _, err := tx.Exec(ctx, string(content)); err != nil {
-			tx.Rollback(ctx)
+			_ = tx.Rollback(ctx)
 			return fmt.Errorf("apply migration %s: %w", name, err)
 		}
 
 		if _, err := tx.Exec(ctx, "INSERT INTO ojs_migrations (name) VALUES ($1)", name); err != nil {
-			tx.Rollback(ctx)
+			_ = tx.Rollback(ctx)
 			return fmt.Errorf("record migration %s: %w", name, err)
 		}
 
@@ -79,7 +79,7 @@ func RunMigrations(ctx context.Context, pool *pgxpool.Pool) error {
 			return fmt.Errorf("commit migration %s: %w", name, err)
 		}
 
-		log.Printf("Applied migration: %s", name)
+		slog.Info("applied migration", "name", name)
 	}
 
 	return nil

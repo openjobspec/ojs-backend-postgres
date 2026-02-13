@@ -28,6 +28,7 @@ func (e *OJSError) Error() string {
 	return fmt.Sprintf("[%s] %s", e.Code, e.Message)
 }
 
+// NewInvalidRequestError creates an error for malformed or invalid requests.
 func NewInvalidRequestError(message string, details map[string]any) *OJSError {
 	return &OJSError{
 		Code:      ErrCodeInvalidRequest,
@@ -37,6 +38,7 @@ func NewInvalidRequestError(message string, details map[string]any) *OJSError {
 	}
 }
 
+// NewNotFoundError creates an error for missing resources.
 func NewNotFoundError(resourceType, resourceID string) *OJSError {
 	return &OJSError{
 		Code:      ErrCodeNotFound,
@@ -49,15 +51,17 @@ func NewNotFoundError(resourceType, resourceID string) *OJSError {
 	}
 }
 
+// NewConflictError creates an error for state conflicts.
 func NewConflictError(message string, details map[string]any) *OJSError {
 	return &OJSError{
-		Code:      ErrCodeInvalidRequest,
+		Code:      ErrCodeConflict,
 		Message:   message,
 		Retryable: false,
 		Details:   details,
 	}
 }
 
+// NewValidationError creates an error for field validation failures.
 func NewValidationError(message string, details map[string]any) *OJSError {
 	return &OJSError{
 		Code:      ErrCodeValidationError,
@@ -68,6 +72,7 @@ func NewValidationError(message string, details map[string]any) *OJSError {
 	}
 }
 
+// NewInternalError creates an error for internal server failures.
 func NewInternalError(message string) *OJSError {
 	return &OJSError{
 		Code:      ErrCodeInternalError,

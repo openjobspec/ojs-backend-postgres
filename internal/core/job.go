@@ -5,6 +5,7 @@ import (
 	"time"
 )
 
+// OJS protocol constants.
 const (
 	OJSVersion   = "1.0.0-rc.1"
 	OJSMediaType = "application/openjobspec+json"
@@ -23,28 +24,28 @@ func NowFormatted() string {
 
 // Job represents a complete OJS job envelope.
 type Job struct {
-	ID          string          `json:"id"`
-	Type        string          `json:"type"`
-	State       string          `json:"state"`
-	Queue       string          `json:"queue"`
-	Args        json.RawMessage `json:"args"`
-	Meta        json.RawMessage `json:"meta,omitempty"`
-	Priority    *int            `json:"priority,omitempty"`
-	Attempt     int             `json:"attempt"`
-	MaxAttempts *int            `json:"max_attempts,omitempty"`
-	TimeoutMs   *int            `json:"timeout_ms,omitempty"`
-	CreatedAt   string          `json:"created_at"`
-	EnqueuedAt  string          `json:"enqueued_at,omitempty"`
-	StartedAt   string          `json:"started_at,omitempty"`
-	CompletedAt string          `json:"completed_at,omitempty"`
-	CancelledAt string          `json:"cancelled_at,omitempty"`
-	ScheduledAt string          `json:"scheduled_at,omitempty"`
-	Result      json.RawMessage `json:"result,omitempty"`
-	Error       json.RawMessage `json:"error,omitempty"`
-	Errors      []json.RawMessage `json:"errors,omitempty"`
-	Tags        []string        `json:"tags,omitempty"`
-	Retry       *RetryPolicy    `json:"retry,omitempty"`
-	Unique      *UniquePolicy   `json:"unique,omitempty"`
+	ID                  string            `json:"id"`
+	Type                string            `json:"type"`
+	State               string            `json:"state"`
+	Queue               string            `json:"queue"`
+	Args                json.RawMessage   `json:"args"`
+	Meta                json.RawMessage   `json:"meta,omitempty"`
+	Priority            *int              `json:"priority,omitempty"`
+	Attempt             int               `json:"attempt"`
+	MaxAttempts         *int              `json:"max_attempts,omitempty"`
+	TimeoutMs           *int              `json:"timeout_ms,omitempty"`
+	CreatedAt           string            `json:"created_at"`
+	EnqueuedAt          string            `json:"enqueued_at,omitempty"`
+	StartedAt           string            `json:"started_at,omitempty"`
+	CompletedAt         string            `json:"completed_at,omitempty"`
+	CancelledAt         string            `json:"cancelled_at,omitempty"`
+	ScheduledAt         string            `json:"scheduled_at,omitempty"`
+	Result              json.RawMessage   `json:"result,omitempty"`
+	Error               json.RawMessage   `json:"error,omitempty"`
+	Errors              []json.RawMessage `json:"errors,omitempty"`
+	Tags                []string          `json:"tags,omitempty"`
+	Retry               *RetryPolicy      `json:"retry,omitempty"`
+	Unique              *UniquePolicy     `json:"unique,omitempty"`
 	ExpiresAt           string            `json:"expires_at,omitempty"`
 	RetryDelayMs        *int64            `json:"retry_delay_ms,omitempty"`
 	ParentResults       []json.RawMessage `json:"parent_results,omitempty"`
@@ -56,18 +57,6 @@ type Job struct {
 
 	// Unknown fields for forward compatibility
 	UnknownFields map[string]json.RawMessage `json:"-"`
-}
-
-// Known field names for Job
-var knownJobFields = map[string]bool{
-	"id": true, "type": true, "state": true, "queue": true,
-	"args": true, "meta": true, "priority": true, "attempt": true,
-	"max_attempts": true, "timeout_ms": true, "created_at": true,
-	"enqueued_at": true, "started_at": true, "completed_at": true,
-	"cancelled_at": true, "scheduled_at": true, "result": true,
-	"error": true, "errors": true, "tags": true, "retry": true, "unique": true,
-	"specversion": true, "options": true, "schema": true,
-	"expires_at": true, "retry_delay_ms": true,
 }
 
 // MarshalJSON implements custom JSON marshaling to include unknown fields.
@@ -83,7 +72,7 @@ func (j Job) MarshalJSON() ([]byte, error) {
 	if j.Args != nil {
 		m["args"] = json.RawMessage(j.Args)
 	}
-	if j.Meta != nil && len(j.Meta) > 0 {
+	if len(j.Meta) > 0 {
 		m["meta"] = json.RawMessage(j.Meta)
 	}
 	if j.Priority != nil {
@@ -113,10 +102,10 @@ func (j Job) MarshalJSON() ([]byte, error) {
 	if j.ScheduledAt != "" {
 		m["scheduled_at"] = j.ScheduledAt
 	}
-	if j.Result != nil && len(j.Result) > 0 {
+	if len(j.Result) > 0 {
 		m["result"] = json.RawMessage(j.Result)
 	}
-	if j.Error != nil && len(j.Error) > 0 {
+	if len(j.Error) > 0 {
 		m["error"] = json.RawMessage(j.Error)
 	}
 	if len(j.Tags) > 0 {

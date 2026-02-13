@@ -11,13 +11,19 @@ import (
 )
 
 // NewRouter creates and configures the HTTP router with all OJS routes.
-func NewRouter(backend core.Backend) http.Handler {
+func NewRouter(backend core.Backend, cfg Config) http.Handler {
 	r := chi.NewRouter()
 
 	// Middleware
 	r.Use(middleware.Recoverer)
+	r.Use(api.LimitRequestBody)
 	r.Use(api.OJSHeaders)
 	r.Use(api.ValidateContentType)
+
+	// Optional API key authentication
+	if cfg.APIKey != "" {
+		r.Use(api.KeyAuth(cfg.APIKey, "/metrics", "/ojs/v1/health"))
+	}
 
 	// Create handlers
 	jobHandler := api.NewJobHandler(backend)

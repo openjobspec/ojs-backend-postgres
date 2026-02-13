@@ -24,10 +24,10 @@ func ValidateEnqueueRequest(req *EnqueueRequest) *OJSError {
 	// Type format validation
 	if !typePattern.MatchString(req.Type) {
 		return NewInvalidRequestError(
-			fmt.Sprintf("The 'type' field must match pattern '^[a-z][a-z0-9_]*(\\.[a-z][a-z0-9_]*)*$'. Got: %q", req.Type),
+			fmt.Sprintf("The 'type' field must match pattern '^[a-z][a-z0-9_\\-]*(\\.[a-z][a-z0-9_\\-]*)*$'. Got: %q", req.Type),
 			map[string]any{
 				"field":    "type",
-				"expected": "^[a-z][a-z0-9_]*(\\.[a-z][a-z0-9_]*)*$",
+				"expected": "^[a-z][a-z0-9_\\-]*(\\.[a-z][a-z0-9_\\-]*)*$",
 				"received": req.Type,
 			},
 		)
