@@ -43,7 +43,7 @@ func (h *BatchHandler) Create(w http.ResponseWriter, r *http.Request) {
 		}
 
 		if ojsErr := core.ValidateEnqueueRequest(enqReq); ojsErr != nil {
-			ojsErr.Message = "Batch validation failed: job at index " + intToStr(i) + " - " + ojsErr.Message
+			ojsErr.Message = "Batch validation failed: job at index " + strconv.Itoa(i) + " - " + ojsErr.Message
 			if ojsErr.Details == nil {
 				ojsErr.Details = make(map[string]any)
 			}
@@ -69,8 +69,4 @@ func (h *BatchHandler) Create(w http.ResponseWriter, r *http.Request) {
 		"jobs":  created,
 		"count": len(created),
 	})
-}
-
-func intToStr(i int) string {
-	return strconv.Itoa(i)
 }

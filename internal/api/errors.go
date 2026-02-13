@@ -21,12 +21,12 @@ func WriteError(w http.ResponseWriter, status int, err *core.OJSError) {
 
 	w.Header().Set("Content-Type", core.OJSMediaType)
 	w.WriteHeader(status)
-	json.NewEncoder(w).Encode(ErrorResponse{Error: err})
+	_ = json.NewEncoder(w).Encode(ErrorResponse{Error: err})
 }
 
 // WriteJSON writes a JSON response with the given status code.
 func WriteJSON(w http.ResponseWriter, status int, data any) {
 	w.Header().Set("Content-Type", core.OJSMediaType)
 	w.WriteHeader(status)
-	json.NewEncoder(w).Encode(data)
+	_ = json.NewEncoder(w).Encode(data)
 }

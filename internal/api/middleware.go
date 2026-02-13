@@ -24,6 +24,19 @@ func OJSHeaders(next http.Handler) http.Handler {
 	})
 }
 
+// MaxBodySize is the maximum allowed request body size (1 MB).
+const MaxBodySize = 1 << 20
+
+// LimitRequestBody middleware limits the size of incoming request bodies.
+func LimitRequestBody(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Body != nil {
+			r.Body = http.MaxBytesReader(w, r.Body, MaxBodySize)
+		}
+		next.ServeHTTP(w, r)
+	})
+}
+
 // ValidateContentType middleware validates the Content-Type header for POST requests.
 func ValidateContentType(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

@@ -91,7 +91,7 @@ func (h *WorkflowHandler) Cancel(w http.ResponseWriter, r *http.Request) {
 			case core.ErrCodeNotFound:
 				WriteError(w, http.StatusNotFound, ojsErr)
 				return
-			case core.ErrCodeInvalidRequest:
+			case core.ErrCodeConflict:
 				WriteError(w, http.StatusConflict, ojsErr)
 				return
 			}
