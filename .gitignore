@@ -1,2 +1,5 @@
 bin/
 .env
+
+# Admin UI build artifacts (rebuild via ojs-admin-ui)
+# internal/admin/dist/
