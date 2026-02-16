@@ -1,14 +1,37 @@
 package server
 
 import (
+	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 
 	"github.com/openjobspec/ojs-backend-postgres/internal/api"
+	"github.com/openjobspec/ojs-backend-postgres/internal/admin"
 	"github.com/openjobspec/ojs-backend-postgres/internal/core"
+	"github.com/openjobspec/ojs-backend-postgres/internal/metrics"
 )
+
+// metricsMiddleware records HTTP request count and duration.
+func metricsMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		start := time.Now()
+		ww := middleware.NewWrapResponseWriter(w, r.ProtoMajor)
+		next.ServeHTTP(ww, r)
+		duration := time.Since(start).Seconds()
+
+		path := "unknown"
+		if rctx := chi.RouteContext(r.Context()); rctx != nil && rctx.RoutePattern() != "" {
+			path = rctx.RoutePattern()
+		}
+
+		metrics.HTTPRequestsTotal.WithLabelValues(r.Method, path, fmt.Sprintf("%d", ww.Status())).Inc()
+		metrics.HTTPRequestDuration.WithLabelValues(r.Method, path).Observe(duration)
+	})
+}
 
 // NewRouter creates and configures the HTTP router with all OJS routes.
 func NewRouter(backend core.Backend, cfg Config) http.Handler {
@@ -16,6 +39,7 @@ func NewRouter(backend core.Backend, cfg Config) http.Handler {
 
 	// Middleware
 	r.Use(middleware.Recoverer)
+	r.Use(metricsMiddleware)
 	r.Use(api.LimitRequestBody)
 	r.Use(api.OJSHeaders)
 	r.Use(api.ValidateContentType)
@@ -24,6 +48,9 @@ func NewRouter(backend core.Backend, cfg Config) http.Handler {
 	if cfg.APIKey != "" {
 		r.Use(api.KeyAuth(cfg.APIKey, "/metrics", "/ojs/v1/health"))
 	}
+
+	// Prometheus metrics endpoint (before OJS routes)
+	r.Handle("/metrics", promhttp.Handler())
 
 	// Create handlers
 	jobHandler := api.NewJobHandler(backend)
@@ -34,6 +61,7 @@ func NewRouter(backend core.Backend, cfg Config) http.Handler {
 	cronHandler := api.NewCronHandler(backend)
 	workflowHandler := api.NewWorkflowHandler(backend)
 	batchHandler := api.NewBatchHandler(backend)
+	eventHandler := api.NewEventHandler(backend)
 
 	// System endpoints
 	r.Get("/ojs/manifest", systemHandler.Manifest)
@@ -73,6 +101,13 @@ func NewRouter(backend core.Backend, cfg Config) http.Handler {
 	r.Post("/ojs/v1/workflows", workflowHandler.Create)
 	r.Get("/ojs/v1/workflows/{id}", workflowHandler.Get)
 	r.Delete("/ojs/v1/workflows/{id}", workflowHandler.Cancel)
+
+	// SSE events endpoint
+	r.Get("/ojs/v1/events", eventHandler.Stream)
+
+	// Admin UI
+	r.Handle("/ojs/admin", http.RedirectHandler("/ojs/admin/", http.StatusMovedPermanently))
+	r.Mount("/ojs/admin/", http.StripPrefix("/ojs/admin/", admin.Handler()))
 
 	return r
 }

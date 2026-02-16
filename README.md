@@ -1,5 +1,9 @@
 # ojs-backend-postgres
 
+[![CI](https://github.com/openjobspec/ojs-backend-postgres/actions/workflows/ci.yml/badge.svg)](https://github.com/openjobspec/ojs-backend-postgres/actions/workflows/ci.yml)
+![Conformance](https://github.com/openjobspec/ojs-backend-postgres/raw/main/.github/badges/conformance.svg)
+[![Security](https://github.com/openjobspec/ojs-backend-postgres/actions/workflows/security.yml/badge.svg)](https://github.com/openjobspec/ojs-backend-postgres/actions/workflows/security.yml)
+
 A production-ready PostgreSQL backend for the [OpenJobSpec](https://github.com/openjobspec) (OJS) job queue specification. It provides a full-featured HTTP API for distributed job queue management -- including priority queues, scheduled jobs, retries with backoff, cron scheduling, workflows, dead letter queues, and more -- all backed by PostgreSQL's `SELECT FOR UPDATE SKIP LOCKED` for safe, non-blocking concurrent job processing.
 
 ## Features
@@ -269,4 +273,4 @@ When submitting issues, please include steps to reproduce, expected behavior, an
 
 ## License
 
-This project does not currently include a license file. Contact the maintainers for usage terms.
+This project is licensed under the [MIT License](LICENSE).
