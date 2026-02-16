@@ -271,6 +271,13 @@ Contributions are welcome. To get started:
 
 When submitting issues, please include steps to reproduce, expected behavior, and the PostgreSQL version you are using.
 
+## Production Deployment Notes
+
+- **Rate limiting**: This server does not enforce request rate limits. Place a reverse proxy (e.g., Nginx, Envoy, or a cloud load balancer) in front of the server to add rate limiting in production.
+- **Authentication**: Set the `OJS_API_KEY` environment variable to enable Bearer token authentication on all endpoints.
+- **TLS**: Terminate TLS at a reverse proxy or load balancer rather than at the application level.
+- **Credentials**: Change the default database credentials before deploying to production.
+
 ## License
 
 This project is licensed under the [MIT License](LICENSE).
