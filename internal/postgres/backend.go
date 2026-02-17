@@ -22,10 +22,13 @@ type Backend struct {
 
 // logExec executes a query and logs any error without failing the caller.
 // Use this for non-critical side-effect queries where the primary operation has already succeeded.
-func (b *Backend) logExec(ctx context.Context, label, sql string, args ...any) {
+// Returns the error so callers can optionally handle it.
+func (b *Backend) logExec(ctx context.Context, label, sql string, args ...any) error {
 	if _, err := b.pool.Exec(ctx, sql, args...); err != nil {
 		slog.Error("side-effect query failed", "operation", label, "error", err)
+		return err
 	}
+	return nil
 }
 
 // BackendConfig holds configurable backend parameters.
