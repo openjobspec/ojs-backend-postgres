@@ -118,6 +118,12 @@ type WorkflowManager interface {
 	AdvanceWorkflow(ctx context.Context, workflowID string, jobID string, result json.RawMessage, failed bool) error
 }
 
+// AdminManager handles admin listing operations.
+type AdminManager interface {
+	ListJobs(ctx context.Context, filters JobListFilters, limit, offset int) ([]*Job, int, error)
+	ListWorkers(ctx context.Context, limit, offset int) ([]*WorkerInfo, WorkerSummary, error)
+}
+
 // Subscriber provides real-time push notifications for job availability.
 type Subscriber interface {
 	// Subscribe returns a channel that emits queue names when jobs become available.
@@ -135,6 +141,7 @@ type Backend interface {
 	CronManager
 	WorkflowManager
 	Subscriber
+	AdminManager
 
 	// Health returns the health status.
 	Health(ctx context.Context) (*HealthResponse, error)
@@ -282,4 +289,29 @@ type WorkflowCallback struct {
 	Type    string          `json:"type"`
 	Args    json.RawMessage `json:"args,omitempty"`
 	Options *EnqueueOptions `json:"options,omitempty"`
+}
+
+// JobListFilters represents supported filters for admin job listing.
+type JobListFilters struct {
+	State    string `json:"state,omitempty"`
+	Queue    string `json:"queue,omitempty"`
+	Type     string `json:"type,omitempty"`
+	WorkerID string `json:"worker_id,omitempty"`
+}
+
+// WorkerInfo represents admin-visible worker state.
+type WorkerInfo struct {
+	ID            string `json:"id"`
+	State         string `json:"state"`
+	Directive     string `json:"directive"`
+	ActiveJobs    int    `json:"active_jobs"`
+	LastHeartbeat string `json:"last_heartbeat,omitempty"`
+}
+
+// WorkerSummary represents aggregate worker counts.
+type WorkerSummary struct {
+	Total   int `json:"total"`
+	Running int `json:"running"`
+	Quiet   int `json:"quiet"`
+	Stale   int `json:"stale"`
 }

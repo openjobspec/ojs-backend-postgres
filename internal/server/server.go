@@ -62,6 +62,7 @@ func NewRouter(backend core.Backend, cfg Config) http.Handler {
 	workflowHandler := api.NewWorkflowHandler(backend)
 	batchHandler := api.NewBatchHandler(backend)
 	eventHandler := api.NewEventHandler(backend)
+	adminHandler := api.NewAdminHandler(backend)
 
 	// System endpoints
 	r.Get("/ojs/manifest", systemHandler.Manifest)
@@ -104,6 +105,25 @@ func NewRouter(backend core.Backend, cfg Config) http.Handler {
 
 	// SSE events endpoint
 	r.Get("/ojs/v1/events", eventHandler.Stream)
+
+	// Admin API endpoints (control plane)
+	r.Get("/ojs/v1/admin/stats", adminHandler.Stats)
+	r.Get("/ojs/v1/admin/queues", adminHandler.ListQueues)
+	r.Get("/ojs/v1/admin/queues/{name}", adminHandler.GetQueue)
+	r.Post("/ojs/v1/admin/queues/{name}/pause", adminHandler.PauseQueue)
+	r.Post("/ojs/v1/admin/queues/{name}/resume", adminHandler.ResumeQueue)
+	r.Get("/ojs/v1/admin/jobs", adminHandler.ListJobs)
+	r.Get("/ojs/v1/admin/jobs/{id}", adminHandler.GetJob)
+	r.Post("/ojs/v1/admin/jobs/{id}/retry", adminHandler.RetryJob)
+	r.Post("/ojs/v1/admin/jobs/{id}/cancel", adminHandler.CancelJob)
+	r.Post("/ojs/v1/admin/jobs/bulk/retry", adminHandler.BulkRetry)
+	r.Get("/ojs/v1/admin/workers", adminHandler.ListWorkers)
+	r.Post("/ojs/v1/admin/workers/{id}/quiet", adminHandler.QuietWorker)
+	r.Get("/ojs/v1/admin/dead-letter", adminHandler.ListDeadLetter)
+	r.Get("/ojs/v1/admin/dead-letter/stats", adminHandler.DeadLetterStats)
+	r.Post("/ojs/v1/admin/dead-letter/{id}/retry", adminHandler.RetryDeadLetter)
+	r.Delete("/ojs/v1/admin/dead-letter/{id}", adminHandler.DeleteDeadLetter)
+	r.Post("/ojs/v1/admin/dead-letter/retry", adminHandler.BulkRetryDeadLetter)
 
 	// Admin UI
 	r.Handle("/ojs/admin", http.RedirectHandler("/ojs/admin/", http.StatusMovedPermanently))
