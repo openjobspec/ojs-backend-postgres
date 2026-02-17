@@ -40,7 +40,7 @@ func (h *DeadLetterHandler) List(w http.ResponseWriter, r *http.Request) {
 
 	jobs, total, err := h.backend.ListDeadLetter(r.Context(), limit, offset)
 	if err != nil {
-		WriteError(w, http.StatusInternalServerError, core.NewInternalError(err.Error()))
+		HandleError(w, err)
 		return
 	}
 
@@ -67,7 +67,7 @@ func (h *DeadLetterHandler) Retry(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 		}
-		WriteError(w, http.StatusInternalServerError, core.NewInternalError(err.Error()))
+		HandleError(w, err)
 		return
 	}
 
@@ -86,7 +86,7 @@ func (h *DeadLetterHandler) Delete(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 		}
-		WriteError(w, http.StatusInternalServerError, core.NewInternalError(err.Error()))
+		HandleError(w, err)
 		return
 	}
 

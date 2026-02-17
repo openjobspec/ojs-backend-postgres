@@ -54,7 +54,7 @@ func (h *WorkflowHandler) Create(w http.ResponseWriter, r *http.Request) {
 			WriteError(w, http.StatusBadRequest, ojsErr)
 			return
 		}
-		WriteError(w, http.StatusInternalServerError, core.NewInternalError(err.Error()))
+		HandleError(w, err)
 		return
 	}
 
@@ -73,7 +73,7 @@ func (h *WorkflowHandler) Get(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 		}
-		WriteError(w, http.StatusInternalServerError, core.NewInternalError(err.Error()))
+		HandleError(w, err)
 		return
 	}
 
@@ -96,7 +96,7 @@ func (h *WorkflowHandler) Cancel(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 		}
-		WriteError(w, http.StatusInternalServerError, core.NewInternalError(err.Error()))
+		HandleError(w, err)
 		return
 	}
 

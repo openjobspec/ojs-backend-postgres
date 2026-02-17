@@ -84,7 +84,7 @@ func (h *JobHandler) Get(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 		}
-		WriteError(w, http.StatusInternalServerError, core.NewInternalError(err.Error()))
+		HandleError(w, err)
 		return
 	}
 
@@ -107,7 +107,7 @@ func (h *JobHandler) Cancel(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 		}
-		WriteError(w, http.StatusInternalServerError, core.NewInternalError(err.Error()))
+		HandleError(w, err)
 		return
 	}
 

@@ -47,7 +47,7 @@ func (h *WorkerHandler) Fetch(w http.ResponseWriter, r *http.Request) {
 			WriteError(w, http.StatusInternalServerError, ojsErr)
 			return
 		}
-		WriteError(w, http.StatusInternalServerError, core.NewInternalError(err.Error()))
+		HandleError(w, err)
 		return
 	}
 
@@ -88,7 +88,7 @@ func (h *WorkerHandler) Ack(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 		}
-		WriteError(w, http.StatusInternalServerError, core.NewInternalError(err.Error()))
+		HandleError(w, err)
 		return
 	}
 
@@ -120,7 +120,7 @@ func (h *WorkerHandler) Nack(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 		}
-		WriteError(w, http.StatusInternalServerError, core.NewInternalError(err.Error()))
+		HandleError(w, err)
 		return
 	}
 
@@ -153,7 +153,7 @@ func (h *WorkerHandler) Heartbeat(w http.ResponseWriter, r *http.Request) {
 
 	resp, err := h.backend.Heartbeat(r.Context(), req.WorkerID, activeJobs, visTimeout)
 	if err != nil {
-		WriteError(w, http.StatusInternalServerError, core.NewInternalError(err.Error()))
+		HandleError(w, err)
 		return
 	}
 

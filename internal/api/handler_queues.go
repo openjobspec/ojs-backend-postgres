@@ -22,7 +22,7 @@ func NewQueueHandler(backend core.Backend) *QueueHandler {
 func (h *QueueHandler) List(w http.ResponseWriter, r *http.Request) {
 	queues, err := h.backend.ListQueues(r.Context())
 	if err != nil {
-		WriteError(w, http.StatusInternalServerError, core.NewInternalError(err.Error()))
+		HandleError(w, err)
 		return
 	}
 
@@ -49,7 +49,7 @@ func (h *QueueHandler) Stats(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 		}
-		WriteError(w, http.StatusInternalServerError, core.NewInternalError(err.Error()))
+		HandleError(w, err)
 		return
 	}
 
@@ -69,7 +69,7 @@ func (h *QueueHandler) Pause(w http.ResponseWriter, r *http.Request) {
 	name := chi.URLParam(r, "name")
 
 	if err := h.backend.PauseQueue(r.Context(), name); err != nil {
-		WriteError(w, http.StatusInternalServerError, core.NewInternalError(err.Error()))
+		HandleError(w, err)
 		return
 	}
 
@@ -86,7 +86,7 @@ func (h *QueueHandler) Resume(w http.ResponseWriter, r *http.Request) {
 	name := chi.URLParam(r, "name")
 
 	if err := h.backend.ResumeQueue(r.Context(), name); err != nil {
-		WriteError(w, http.StatusInternalServerError, core.NewInternalError(err.Error()))
+		HandleError(w, err)
 		return
 	}
 
