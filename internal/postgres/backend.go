@@ -45,7 +45,7 @@ func DefaultBackendConfig() BackendConfig {
 	return BackendConfig{
 		PoolMinConns:               2,
 		PoolMaxConns:               20,
-		DefaultVisibilityTimeoutMs: 30000,
+		DefaultVisibilityTimeoutMs: core.DefaultVisibilityTimeoutMs,
 		RetentionCompletedDays:     7,
 		RetentionDiscardedDays:     30,
 	}
