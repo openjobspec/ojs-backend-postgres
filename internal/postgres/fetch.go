@@ -5,12 +5,17 @@ import (
 	"fmt"
 	"time"
 
+	ojsotel "github.com/openjobspec/ojs-go-backend-common/otel"
+
 	"github.com/openjobspec/ojs-backend-postgres/internal/core"
 	"github.com/openjobspec/ojs-backend-postgres/internal/metrics"
 )
 
 // Fetch claims jobs from the specified queues.
 func (b *Backend) Fetch(ctx context.Context, queues []string, count int, workerID string, visibilityTimeoutMs int) ([]*core.Job, error) {
+	ctx, span := ojsotel.StartStorageSpan(ctx, "fetch", "postgres")
+	defer span.End()
+
 	fetchStart := time.Now()
 	defer func() {
 		metrics.FetchDuration.Observe(time.Since(fetchStart).Seconds())

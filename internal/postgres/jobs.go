@@ -10,12 +10,17 @@ import (
 	"sync"
 	"time"
 
+	ojsotel "github.com/openjobspec/ojs-go-backend-common/otel"
+
 	"github.com/openjobspec/ojs-backend-postgres/internal/core"
 	"github.com/openjobspec/ojs-backend-postgres/internal/metrics"
 )
 
 // Push enqueues a single job.
 func (b *Backend) Push(ctx context.Context, job *core.Job) (*core.Job, error) {
+	ctx, span := ojsotel.StartJobSpan(ctx, "push", job.ID, job.Type, job.Queue)
+	defer span.End()
+
 	now := time.Now()
 
 	if job.ID == "" {

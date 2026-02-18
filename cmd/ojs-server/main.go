@@ -9,6 +9,9 @@ import (
 	"os/signal"
 	"syscall"
 
+	ojsotel "github.com/openjobspec/ojs-go-backend-common/otel"
+
+	"github.com/openjobspec/ojs-backend-postgres/internal/core"
 	pgbackend "github.com/openjobspec/ojs-backend-postgres/internal/postgres"
 	"github.com/openjobspec/ojs-backend-postgres/internal/scheduler"
 	"github.com/openjobspec/ojs-backend-postgres/internal/server"
@@ -16,6 +19,34 @@ import (
 
 func main() {
 	cfg := server.LoadConfig()
+	if cfg.DatabaseURL == "" {
+		slog.Error("missing required database configuration", "env", "DATABASE_URL")
+		os.Exit(1)
+	}
+	if cfg.APIKey == "" && !cfg.AllowInsecureNoAuth {
+		slog.Error("refusing to start without API authentication", "hint", "set OJS_API_KEY or OJS_ALLOW_INSECURE_NO_AUTH=true for local development")
+		os.Exit(1)
+	}
+	if cfg.AllowInsecureNoAuth {
+		slog.Warn("⚠️  RUNNING WITHOUT AUTHENTICATION — this is intended for local development only. Set OJS_API_KEY for any shared or production environment.")
+	}
+
+	// Initialize OpenTelemetry (opt-in via OJS_OTEL_ENABLED or OTEL_EXPORTER_OTLP_ENDPOINT)
+	otelEndpoint := os.Getenv("OTEL_EXPORTER_OTLP_ENDPOINT")
+	if ep := os.Getenv("OJS_OTEL_ENDPOINT"); ep != "" {
+		otelEndpoint = ep
+	}
+	otelShutdown, err := ojsotel.Init(context.Background(), ojsotel.Config{
+		ServiceName:    "ojs-backend-postgres",
+		ServiceVersion: core.OJSVersion,
+		Enabled:        os.Getenv("OJS_OTEL_ENABLED") == "true" || otelEndpoint != "",
+		Endpoint:       otelEndpoint,
+	})
+	if err != nil {
+		slog.Error("failed to initialize OpenTelemetry", "error", err)
+		os.Exit(1)
+	}
+	defer func() { _ = otelShutdown(context.Background()) }()
 
 	// Connect to Postgres
 	backend, err := pgbackend.New(cfg.DatabaseURL, func(bc *pgbackend.BackendConfig) {

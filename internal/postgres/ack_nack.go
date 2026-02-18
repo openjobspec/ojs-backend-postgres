@@ -6,12 +6,17 @@ import (
 	"fmt"
 	"time"
 
+	ojsotel "github.com/openjobspec/ojs-go-backend-common/otel"
+
 	"github.com/openjobspec/ojs-backend-postgres/internal/core"
 	"github.com/openjobspec/ojs-backend-postgres/internal/metrics"
 )
 
 // Ack acknowledges a job as completed.
 func (b *Backend) Ack(ctx context.Context, jobID string, result []byte) (*core.AckResponse, error) {
+	ctx, span := ojsotel.StartJobSpan(ctx, "ack", jobID, "", "")
+	defer span.End()
+
 	now := time.Now()
 
 	var currentState, queue string
@@ -73,6 +78,9 @@ func (b *Backend) Ack(ctx context.Context, jobID string, result []byte) (*core.A
 
 // Nack reports a job failure.
 func (b *Backend) Nack(ctx context.Context, jobID string, jobErr *core.JobError, requeue bool) (*core.NackResponse, error) {
+	ctx, span := ojsotel.StartJobSpan(ctx, "nack", jobID, "", "")
+	defer span.End()
+
 	now := time.Now()
 
 	var currentState, queue string
