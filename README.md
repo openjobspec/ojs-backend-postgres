@@ -52,7 +52,7 @@ make docker-down
 make build
 
 # Start the server (requires a running PostgreSQL instance)
-DATABASE_URL="postgres://user:pass@localhost:5432/ojs?sslmode=disable" make run
+DATABASE_URL="postgres://user:pass@localhost:5432/ojs?sslmode=prefer" make run
 ```
 
 Database migrations run automatically on startup.
@@ -68,7 +68,7 @@ curl -X POST http://localhost:8080/ojs/v1/jobs \
   -H "Content-Type: application/json" \
   -d '{
     "type": "email.send",
-    "args": {"to": "user@example.com", "subject": "Hello"},
+    "args": ["user@example.com", "Hello"],
     "options": {
       "queue": "emails",
       "priority": 10
@@ -106,7 +106,7 @@ curl -X POST http://localhost:8080/ojs/v1/jobs \
   -H "Content-Type: application/json" \
   -d '{
     "type": "report.generate",
-    "args": {"report_id": 42},
+    "args": [42],
     "options": {
       "queue": "reports",
       "scheduled_at": "2025-12-01T09:00:00Z"
@@ -126,7 +126,7 @@ curl -X POST http://localhost:8080/ojs/v1/cron \
     "queue": "maintenance",
     "job_template": {
       "type": "db.cleanup",
-      "args": {"older_than_days": 90}
+      "args": [90]
     }
   }'
 ```
@@ -140,9 +140,9 @@ curl -X POST http://localhost:8080/ojs/v1/workflows \
     "name": "etl-pipeline",
     "type": "chain",
     "jobs": [
-      {"type": "extract", "args": {"source": "s3://bucket/data"}},
-      {"type": "transform", "args": {"format": "parquet"}},
-      {"type": "load", "args": {"destination": "warehouse"}}
+      {"type": "extract", "args": ["s3://bucket/data"]},
+      {"type": "transform", "args": ["parquet"]},
+      {"type": "load", "args": ["warehouse"]}
     ]
   }'
 ```
@@ -271,10 +271,24 @@ Contributions are welcome. To get started:
 
 When submitting issues, please include steps to reproduce, expected behavior, and the PostgreSQL version you are using.
 
+## Observability
+
+### OpenTelemetry
+
+The server supports distributed tracing via OpenTelemetry. Set the following environment variable to enable:
+
+```bash
+export OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4317
+```
+
+Traces are exported in OTLP format over gRPC. Compatible with Jaeger, Zipkin, Grafana Tempo, and any OTLP-compatible collector.
+
+You can also use the legacy env vars `OJS_OTEL_ENABLED=true` and `OJS_OTEL_ENDPOINT` for explicit control.
+
 ## Production Deployment Notes
 
 - **Rate limiting**: This server does not enforce request rate limits. Place a reverse proxy (e.g., Nginx, Envoy, or a cloud load balancer) in front of the server to add rate limiting in production.
-- **Authentication**: Set the `OJS_API_KEY` environment variable to enable Bearer token authentication on all endpoints.
+- **Authentication**: Set `OJS_API_KEY` to require Bearer token auth on all endpoints. For local-only testing, set `OJS_ALLOW_INSECURE_NO_AUTH=true`.
 - **TLS**: Terminate TLS at a reverse proxy or load balancer rather than at the application level.
 - **Credentials**: Change the default database credentials before deploying to production.
 
