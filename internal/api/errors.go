@@ -1,58 +1,31 @@
 package api
 
 import (
-	"encoding/json"
-	"log/slog"
 	"net/http"
 
 	"github.com/openjobspec/ojs-backend-postgres/internal/core"
+	"github.com/openjobspec/ojs-go-backend-common/httputil"
 )
 
 // ErrorResponse wraps an OJS error for JSON serialization.
-type ErrorResponse struct {
-	Error *core.OJSError `json:"error"`
-}
+type ErrorResponse = httputil.ErrorResponse
 
 // WriteError writes an OJS-formatted error response.
 func WriteError(w http.ResponseWriter, status int, err *core.OJSError) {
-	reqID := w.Header().Get("X-Request-Id")
-	if reqID != "" {
-		err.RequestID = reqID
-	}
-
-	w.Header().Set("Content-Type", core.OJSMediaType)
-	w.WriteHeader(status)
-	if encErr := json.NewEncoder(w).Encode(ErrorResponse{Error: err}); encErr != nil {
-		slog.Error("failed to encode error response", "error", encErr)
-	}
+	httputil.WriteError(w, status, err)
 }
 
 // WriteJSON writes a JSON response with the given status code.
 func WriteJSON(w http.ResponseWriter, status int, data any) {
-	w.Header().Set("Content-Type", core.OJSMediaType)
-	w.WriteHeader(status)
-	if encErr := json.NewEncoder(w).Encode(data); encErr != nil {
-		slog.Error("failed to encode JSON response", "error", encErr)
-	}
+	httputil.WriteJSON(w, status, data)
 }
 
-// HandleError maps any error to an appropriate HTTP response.
+// WriteOJSError maps an OJSError to the appropriate HTTP status code and writes it.
+func WriteOJSError(w http.ResponseWriter, err *core.OJSError) {
+	httputil.WriteOJSError(w, err)
+}
+
+// HandleError dispatches an error as an HTTP response.
 func HandleError(w http.ResponseWriter, err error) {
-	if ojsErr, ok := err.(*core.OJSError); ok {
-		status := http.StatusInternalServerError
-		switch ojsErr.Code {
-		case core.ErrCodeNotFound:
-			status = http.StatusNotFound
-		case core.ErrCodeConflict, core.ErrCodeDuplicate:
-			status = http.StatusConflict
-		case core.ErrCodeInvalidRequest, core.ErrCodeValidationError:
-			status = http.StatusBadRequest
-		case core.ErrCodeQueuePaused:
-			status = http.StatusConflict
-		}
-		WriteError(w, status, ojsErr)
-		return
-	}
-	slog.Error("unhandled internal error", "error", err)
-	WriteError(w, http.StatusInternalServerError, core.NewInternalError("an internal error occurred"))
+	httputil.HandleError(w, err)
 }
