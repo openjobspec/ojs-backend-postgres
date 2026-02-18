@@ -1,13 +1,13 @@
 .PHONY: build run test test-integration lint vet clean docker-up docker-down dev docker-dev
 
-DATABASE_URL ?= postgres://localhost:5432/ojs?sslmode=disable
+DATABASE_URL ?= postgres://ojs:ojs@localhost:5432/ojs?sslmode=prefer
 OJS_URL ?= http://localhost:8080
 
 build:
 	go build -o bin/ojs-server ./cmd/ojs-server
 
 run: build
-	DATABASE_URL=$(DATABASE_URL) ./bin/ojs-server
+	OJS_ALLOW_INSECURE_NO_AUTH=true DATABASE_URL=$(DATABASE_URL) ./bin/ojs-server
 
 test:
 	go test ./... -race -cover
