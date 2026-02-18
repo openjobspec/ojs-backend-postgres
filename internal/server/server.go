@@ -9,6 +9,8 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
+	ojsotel "github.com/openjobspec/ojs-go-backend-common/otel"
+
 	"github.com/openjobspec/ojs-backend-postgres/internal/api"
 	"github.com/openjobspec/ojs-backend-postgres/internal/admin"
 	"github.com/openjobspec/ojs-backend-postgres/internal/core"
@@ -35,10 +37,17 @@ func metricsMiddleware(next http.Handler) http.Handler {
 
 // NewRouter creates and configures the HTTP router with all OJS routes.
 func NewRouter(backend core.Backend, cfg Config) http.Handler {
+	return NewRouterWithRealtime(backend, cfg, nil, nil)
+}
+
+// NewRouterWithRealtime creates and configures the HTTP router with all OJS routes
+// including real-time SSE and WebSocket endpoints.
+func NewRouterWithRealtime(backend core.Backend, cfg Config, publisher core.EventPublisher, subscriber core.EventSubscriber) http.Handler {
 	r := chi.NewRouter()
 
 	// Middleware
 	r.Use(middleware.Recoverer)
+	r.Use(ojsotel.HTTPMiddleware)
 	r.Use(metricsMiddleware)
 	r.Use(api.LimitRequestBody)
 	r.Use(api.OJSHeaders)
@@ -103,8 +112,18 @@ func NewRouter(backend core.Backend, cfg Config) http.Handler {
 	r.Get("/ojs/v1/workflows/{id}", workflowHandler.Get)
 	r.Delete("/ojs/v1/workflows/{id}", workflowHandler.Cancel)
 
-	// SSE events endpoint
+	// SSE events endpoint (job availability)
 	r.Get("/ojs/v1/events", eventHandler.Stream)
+
+	// Real-time endpoints (SSE and WebSocket)
+	if subscriber != nil {
+		sseHandler := api.NewSSEHandler(backend, subscriber)
+		wsHandler := api.NewWSHandler(backend, subscriber)
+
+		r.Get("/ojs/v1/jobs/{id}/events", sseHandler.JobEvents)
+		r.Get("/ojs/v1/queues/{name}/events", sseHandler.QueueEvents)
+		r.Get("/ojs/v1/ws", wsHandler.Handle)
+	}
 
 	// Admin API endpoints (control plane)
 	r.Get("/ojs/v1/admin/stats", adminHandler.Stats)
