@@ -49,7 +49,7 @@ jobs:
       - name: Start server
         working-directory: ojs-backend-postgres
         run: |
-          DATABASE_URL=postgres://ojs:ojs@localhost:5432/ojs?sslmode=disable ./bin/ojs-server &
+          OJS_ALLOW_INSECURE_NO_AUTH=true DATABASE_URL=postgres://ojs:ojs@localhost:5432/ojs?sslmode=prefer ./bin/ojs-server &
           sleep 3
           curl -sf http://localhost:8080/ojs/v1/health
 

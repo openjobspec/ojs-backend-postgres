@@ -99,7 +99,7 @@ func (m *mockBackend) Health(ctx context.Context) (*core.HealthResponse, error) 
 	if m.healthFunc != nil {
 		return m.healthFunc(ctx)
 	}
-	return &core.HealthResponse{Status: "ok", Version: "1.0.0-rc.1"}, nil
+	return &core.HealthResponse{Status: "ok", Version: "1.0"}, nil
 }
 
 func (m *mockBackend) Heartbeat(ctx context.Context, workerID string, activeJobs []string, visMs int) (*core.HeartbeatResponse, error) {

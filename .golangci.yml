@@ -16,6 +16,10 @@ linters:
     - gofmt
     - goimports
     - revive
+    - gocyclo
+    - unparam
+    - bodyclose
+    - noctx
 
 linters-settings:
   errcheck:
@@ -33,6 +37,8 @@ linters-settings:
         severity: warning
       - name: unexported-return
         severity: warning
+  gocyclo:
+    min-complexity: 15
 
 issues:
   exclude-use-default: false
