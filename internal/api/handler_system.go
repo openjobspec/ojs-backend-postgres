@@ -3,50 +3,41 @@ package api
 import (
 	"net/http"
 
-	"github.com/openjobspec/ojs-backend-postgres/internal/core"
+	commonapi "github.com/openjobspec/ojs-go-backend-common/api"
+	"github.com/openjobspec/ojs-go-backend-common/core"
 )
 
-// SystemHandler handles system-related HTTP endpoints.
-type SystemHandler struct {
-	backend core.Backend
-}
+type SystemHandler = commonapi.SystemHandler
 
-// NewSystemHandler creates a new SystemHandler.
 func NewSystemHandler(backend core.Backend) *SystemHandler {
-	return &SystemHandler{backend: backend}
-}
-
-// Manifest handles GET /ojs/manifest
-func (h *SystemHandler) Manifest(w http.ResponseWriter, r *http.Request) {
-	WriteJSON(w, http.StatusOK, map[string]any{
-		"specversion": core.OJSVersion,
-		"implementation": map[string]any{
-			"name":    "ojs-backend-postgres",
-			"version": "0.1.0",
-			"backend": "postgres",
+	return commonapi.NewSystemHandler(backend, commonapi.ManifestConfig{
+		ImplementationName: "ojs-backend-postgres",
+		ImplementationVer:  core.OJSVersion,
+		BackendName:        "postgres",
+		ConformanceLevel:   4,
+		Capabilities: map[string]any{
+			"batch_enqueue":     true,
+			"cron_jobs":         true,
+			"dead_letter":       true,
+			"delayed_jobs":      true,
+			"job_ttl":           true,
+			"priority_queues":   true,
+			"rate_limiting":     false,
+			"schema_validation": true,
+			"unique_jobs":       true,
+			"workflows":         true,
+			"pause_resume":      true,
 		},
-		"levels": []int{0, 1, 2, 3, 4},
-		"capabilities": []string{
-			"push", "fetch", "ack", "fail", "cancel", "info",
-			"heartbeat", "dead-letter", "retry", "cron",
-			"scheduled", "workflows", "batch", "priority",
-			"unique", "queue-pause", "queue-stats",
+		Extensions: map[string]any{
+			"official": []map[string]any{
+				{"name": "admin-api", "uri": "urn:ojs:ext:admin-api", "version": "1.0.0"},
+				{"name": "dead-letter", "uri": "urn:ojs:ext:dead-letter", "version": "1.0.0"},
+			},
 		},
 	})
 }
 
-// Health handles GET /ojs/v1/health
-func (h *SystemHandler) Health(w http.ResponseWriter, r *http.Request) {
-	resp, err := h.backend.Health(r.Context())
-	if err != nil {
-		WriteJSON(w, http.StatusServiceUnavailable, resp)
-		return
-	}
-
-	status := http.StatusOK
-	if resp.Status != "ok" {
-		status = http.StatusServiceUnavailable
-	}
-
-	WriteJSON(w, status, resp)
-}
+var (
+	_ func(http.ResponseWriter, *http.Request) = (*SystemHandler)(nil).Manifest
+	_ func(http.ResponseWriter, *http.Request) = (*SystemHandler)(nil).Health
+)
