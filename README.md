@@ -295,3 +295,4 @@ You can also use the legacy env vars `OJS_OTEL_ENABLED=true` and `OJS_OTEL_ENDPO
 ## License
 
 This project is licensed under the [MIT License](LICENSE).
+
