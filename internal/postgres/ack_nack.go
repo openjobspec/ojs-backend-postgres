@@ -19,8 +19,8 @@ func (b *Backend) Ack(ctx context.Context, jobID string, result []byte) (*core.A
 
 	now := time.Now()
 
-	var currentState, queue string
-	err := b.pool.QueryRow(ctx, "SELECT state, queue FROM ojs_jobs WHERE id = $1", jobID).Scan(&currentState, &queue)
+	var currentState, queue, jobType string
+	err := b.pool.QueryRow(ctx, "SELECT state, queue, type FROM ojs_jobs WHERE id = $1", jobID).Scan(&currentState, &queue, &jobType)
 	if err != nil {
 		return nil, core.NewNotFoundError("Job", jobID)
 	}
@@ -59,7 +59,7 @@ func (b *Backend) Ack(ctx context.Context, jobID string, result []byte) (*core.A
 	b.logExec(ctx, "queue-stats",
 		"UPDATE ojs_queues SET completed_count = completed_count + 1 WHERE name = $1", queue)
 
-	metrics.JobsCompleted.Inc()
+	metrics.JobsCompleted.WithLabelValues(queue, jobType).Inc()
 	metrics.ActiveJobs.WithLabelValues(queue).Dec()
 
 	// Advance workflow if applicable
@@ -83,14 +83,14 @@ func (b *Backend) Nack(ctx context.Context, jobID string, jobErr *core.JobError,
 
 	now := time.Now()
 
-	var currentState, queue string
+	var currentState, queue, jobType string
 	var attempt, maxAttempts int
 	var retryPolicyJSON []byte
 	var priority int
 
 	err := b.pool.QueryRow(ctx,
-		"SELECT state, queue, attempt, max_attempts, retry_policy, priority FROM ojs_jobs WHERE id = $1",
-		jobID).Scan(&currentState, &queue, &attempt, &maxAttempts, &retryPolicyJSON, &priority)
+		"SELECT state, queue, type, attempt, max_attempts, retry_policy, priority FROM ojs_jobs WHERE id = $1",
+		jobID).Scan(&currentState, &queue, &jobType, &attempt, &maxAttempts, &retryPolicyJSON, &priority)
 	if err != nil {
 		return nil, core.NewNotFoundError("Job", jobID)
 	}
@@ -106,7 +106,7 @@ func (b *Backend) Nack(ctx context.Context, jobID string, jobErr *core.JobError,
 		)
 	}
 
-	metrics.JobsFailed.Inc()
+	metrics.JobsFailed.WithLabelValues(queue, jobType).Inc()
 	metrics.ActiveJobs.WithLabelValues(queue).Dec()
 
 	// Handle requeue

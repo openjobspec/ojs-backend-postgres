@@ -22,18 +22,18 @@ var (
 	}, []string{"queue"})
 
 	// JobsCompleted counts total jobs acknowledged (completed).
-	JobsCompleted = promauto.NewCounter(prometheus.CounterOpts{
+	JobsCompleted = promauto.NewCounterVec(prometheus.CounterOpts{
 		Namespace: "ojs",
 		Name:      "jobs_completed_total",
 		Help:      "Total number of jobs completed.",
-	})
+	}, []string{"queue", "type"})
 
 	// JobsFailed counts total jobs that failed (nacked).
-	JobsFailed = promauto.NewCounter(prometheus.CounterOpts{
+	JobsFailed = promauto.NewCounterVec(prometheus.CounterOpts{
 		Namespace: "ojs",
 		Name:      "jobs_failed_total",
 		Help:      "Total number of jobs failed.",
-	})
+	}, []string{"queue", "type"})
 
 	// JobsDiscarded counts total jobs discarded (exhausted retries).
 	JobsDiscarded = promauto.NewCounter(prometheus.CounterOpts{
@@ -70,5 +70,5 @@ var (
 		Name:      "http_request_duration_seconds",
 		Help:      "Duration of HTTP requests in seconds.",
 		Buckets:   []float64{0.001, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5},
-	}, []string{"method", "path"})
+	}, []string{"method", "path", "status"})
 )
