@@ -31,7 +31,7 @@ func metricsMiddleware(next http.Handler) http.Handler {
 		}
 
 		metrics.HTTPRequestsTotal.WithLabelValues(r.Method, path, fmt.Sprintf("%d", ww.Status())).Inc()
-		metrics.HTTPRequestDuration.WithLabelValues(r.Method, path).Observe(duration)
+		metrics.HTTPRequestDuration.WithLabelValues(r.Method, path, fmt.Sprintf("%d", ww.Status())).Observe(duration)
 	})
 }
 

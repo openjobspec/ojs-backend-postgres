@@ -66,12 +66,16 @@ func RunMigrations(ctx context.Context, pool *pgxpool.Pool) error {
 		}
 
 		if _, err := tx.Exec(ctx, string(content)); err != nil {
-			_ = tx.Rollback(ctx)
+			if rbErr := tx.Rollback(ctx); rbErr != nil {
+				slog.Error("migration rollback failed", "migration", name, "error", rbErr)
+			}
 			return fmt.Errorf("apply migration %s: %w", name, err)
 		}
 
 		if _, err := tx.Exec(ctx, "INSERT INTO ojs_migrations (name) VALUES ($1)", name); err != nil {
-			_ = tx.Rollback(ctx)
+			if rbErr := tx.Rollback(ctx); rbErr != nil {
+				slog.Error("migration rollback failed", "migration", name, "error", rbErr)
+			}
 			return fmt.Errorf("record migration %s: %w", name, err)
 		}
 

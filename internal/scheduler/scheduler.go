@@ -75,10 +75,10 @@ func (s *Scheduler) runLoop(name string, interval time.Duration, fn func(context
 			return
 		case <-ticker.C:
 			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+			defer cancel()
 			if err := fn(ctx); err != nil {
 				slog.Error("scheduler loop error", "loop", name, "error", err)
 			}
-			cancel()
 		}
 	}
 }

@@ -5,11 +5,13 @@ import (
 	"crypto/sha256"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"regexp"
 	"sort"
 	"sync"
 	"time"
 
+	"github.com/jackc/pgx/v5"
 	ojsotel "github.com/openjobspec/ojs-go-backend-common/otel"
 
 	"github.com/openjobspec/ojs-backend-postgres/internal/core"
@@ -44,7 +46,11 @@ func (b *Backend) Push(ctx context.Context, job *core.Job) (*core.Job, error) {
 		if err != nil {
 			return nil, fmt.Errorf("begin unique job tx: %w", err)
 		}
-		defer func() { _ = tx.Rollback(ctx) }()
+		defer func() {
+			if err := tx.Rollback(ctx); err != nil && err != pgx.ErrTxClosed {
+				slog.Error("transaction rollback failed", "error", err)
+			}
+		}()
 
 		// Check for existing job with same unique key in non-terminal states
 		var existingID, existingState string
@@ -288,7 +294,11 @@ func (b *Backend) PushBatch(ctx context.Context, jobs []*core.Job) ([]*core.Job,
 	if err != nil {
 		return nil, fmt.Errorf("begin batch tx: %w", err)
 	}
-	defer func() { _ = tx.Rollback(ctx) }()
+	defer func() {
+		if err := tx.Rollback(ctx); err != nil && err != pgx.ErrTxClosed {
+			slog.Error("transaction rollback failed", "error", err)
+		}
+	}()
 
 	for _, job := range jobs {
 		if job.ID == "" {
