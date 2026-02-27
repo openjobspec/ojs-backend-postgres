@@ -125,3 +125,4 @@ func redactDatabaseURL(raw string) string {
 	}
 	return u.String()
 }
+
