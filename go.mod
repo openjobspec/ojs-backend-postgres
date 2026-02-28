@@ -6,7 +6,7 @@ toolchain go1.24.4
 
 require (
 	github.com/go-chi/chi/v5 v5.2.5
-	github.com/jackc/pgx/v5 v5.7.4
+	github.com/jackc/pgx/v5 v5.8.0
 	github.com/openjobspec/ojs-go-backend-common v0.0.0
 	github.com/prometheus/client_golang v1.23.2
 	github.com/prometheus/client_model v0.6.2
