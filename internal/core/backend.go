@@ -48,6 +48,22 @@ type Workflow = common.Workflow
 type WorkflowCallbacks = common.WorkflowCallbacks
 type WorkflowCallback = common.WorkflowCallback
 
+// History, purge, checkpoint, and schema type aliases.
+type HistoryManager = common.HistoryManager
+type HistoryEvent = common.HistoryEvent
+type HistoryActor = common.HistoryActor
+type HistoryPage = common.HistoryPage
+type JobLineage = common.JobLineage
+type PurgeManager = common.PurgeManager
+type PurgeFilters = common.PurgeFilters
+type PurgeResult = common.PurgeResult
+type Checkpoint = common.Checkpoint
+type CheckpointManager = common.CheckpointManager
+type SchemaRegistry = common.SchemaRegistry
+type Schema = common.Schema
+type SchemaVersion = common.SchemaVersion
+type ValidationResult = common.ValidationResult
+
 // Constant aliases for shared constants.
 const (
 	StateAvailable = common.StateAvailable
@@ -95,6 +111,21 @@ var (
 	NewConflictError       = common.NewConflictError
 	NewValidationError     = common.NewValidationError
 	NewInternalError       = common.NewInternalError
+)
+
+// History function aliases.
+var (
+	NewHistoryEvent             = common.NewHistoryEvent
+	SystemActor                 = common.SystemActor
+	WorkerActor                 = common.WorkerActor
+	ClientActor                 = common.ClientActor
+	HistoryEventJobCreated      = common.HistoryEventJobCreated
+	HistoryEventStateChanged    = common.HistoryEventStateChanged
+	HistoryEventAttemptStarted  = common.HistoryEventAttemptStarted
+	HistoryEventAttemptCompleted = common.HistoryEventAttemptCompleted
+	HistoryEventAttemptFailed   = common.HistoryEventAttemptFailed
+	HistoryEventCancelled       = common.HistoryEventCancelled
+	HistoryEventDiscarded       = common.HistoryEventDiscarded
 )
 
 // Subscriber provides real-time push notifications for job availability.

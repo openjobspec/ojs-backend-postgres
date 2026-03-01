@@ -238,6 +238,10 @@ func (b *Backend) insertJob(ctx context.Context, job *core.Job, now time.Time, u
 
 	metrics.JobsEnqueued.WithLabelValues(job.Queue, job.Type).Inc()
 
+	// Record history event
+	b.RecordEvent(ctx, core.NewHistoryEvent(job.ID, core.HistoryEventJobCreated,
+		core.ClientActor(""), map[string]any{"queue": job.Queue, "type": job.Type}))
+
 	return b.Info(ctx, job.ID)
 }
 
@@ -281,6 +285,9 @@ func (b *Backend) Cancel(ctx context.Context, jobID string) (*core.Job, error) {
 	if err != nil {
 		return nil, fmt.Errorf("cancel job: %w", err)
 	}
+
+	b.RecordEvent(ctx, core.NewHistoryEvent(jobID, core.HistoryEventCancelled,
+		core.ClientActor(""), map[string]any{"from_state": currentState}))
 
 	return b.Info(ctx, jobID)
 }

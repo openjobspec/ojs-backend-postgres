@@ -67,6 +67,10 @@ func (b *Backend) Ack(ctx context.Context, jobID string, result []byte) (*core.A
 
 	job, _ := b.Info(ctx, jobID)
 
+	b.DeleteCheckpoint(ctx, jobID)
+	b.RecordEvent(ctx, core.NewHistoryEvent(jobID, core.HistoryEventAttemptCompleted,
+		core.SystemActor(), map[string]any{"state": core.StateCompleted}))
+
 	return &core.AckResponse{
 		Acknowledged: true,
 		JobID:        jobID,
@@ -253,6 +257,16 @@ func (b *Backend) Nack(ctx context.Context, jobID string, jobErr *core.JobError,
 	}
 
 	job, _ := b.Info(ctx, jobID)
+
+	errMsg := ""
+	if jobErr != nil {
+		errMsg = jobErr.Message
+	}
+	b.RecordEvent(ctx, core.NewHistoryEvent(jobID, core.HistoryEventAttemptFailed,
+		core.SystemActor(), map[string]any{
+			"attempt": newAttempt, "will_retry": true, "error": errMsg,
+		}))
+
 	return &core.NackResponse{
 		JobID:         jobID,
 		State:         core.StateRetryable,
