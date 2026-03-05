@@ -10,6 +10,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
 	"github.com/openjobspec/ojs-go-backend-common/audit"
+	commonapi "github.com/openjobspec/ojs-go-backend-common/api"
 	commonmw "github.com/openjobspec/ojs-go-backend-common/middleware"
 	ojsotel "github.com/openjobspec/ojs-go-backend-common/otel"
 
@@ -172,6 +173,9 @@ func NewRouterWithRealtime(backend core.Backend, cfg Config, publisher core.Even
 	// Admin UI
 	r.Handle("/ojs/admin", http.RedirectHandler("/ojs/admin/", http.StatusMovedPermanently))
 	r.Mount("/ojs/admin/", http.StripPrefix("/ojs/admin/", admin.Handler()))
+
+	// API documentation (Swagger UI)
+	commonapi.RegisterDocsRoutes(r, api.OpenAPISpec)
 
 	return r
 }
