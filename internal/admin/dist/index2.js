@@ -8,3 +8,4 @@ export {
   u as OJSAdminClient,
   m as mountOJSAdmin
 };
+
