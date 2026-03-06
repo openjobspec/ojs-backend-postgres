@@ -288,3 +288,4 @@ func (b *Backend) advanceWorkflowForJob(ctx context.Context, jobID, state string
 	failed := state == core.StateDiscarded || state == core.StateCancelled
 	_ = b.AdvanceWorkflow(ctx, *workflowID, jobID, json.RawMessage(result), failed)
 }
+
