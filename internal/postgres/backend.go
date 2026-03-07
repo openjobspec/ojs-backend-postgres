@@ -66,7 +66,8 @@ func New(databaseURL string, opts ...func(*BackendConfig)) (*Backend, error) {
 	config.MinConns = cfg.PoolMinConns
 	config.MaxConns = cfg.PoolMaxConns
 
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
 	pool, err := pgxpool.NewWithConfig(ctx, config)
 	if err != nil {
 		return nil, fmt.Errorf("creating connection pool: %w", err)
