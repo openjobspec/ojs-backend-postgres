@@ -421,3 +421,4 @@ func matchesPattern(s, pattern string) bool {
 	patternCache.Store(key, re)
 	return re.MatchString(s)
 }
+
