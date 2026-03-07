@@ -96,3 +96,4 @@ func TestWorkflowStepToJob_MapsWorkflowFieldsAndRetry(t *testing.T) {
 		t.Fatal("MaxAttempts was not mapped from retry policy")
 	}
 }
+
