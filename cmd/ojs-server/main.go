@@ -29,12 +29,9 @@ func main() {
 		slog.Error("missing required database configuration", "env", "DATABASE_URL")
 		os.Exit(1)
 	}
-	if cfg.APIKey == "" && !cfg.AllowInsecureNoAuth {
-		slog.Error("refusing to start without API authentication", "hint", "set OJS_API_KEY or OJS_ALLOW_INSECURE_NO_AUTH=true for local development")
+	if err := cfg.BaseConfig.Validate(); err != nil {
+		slog.Error("configuration error", "error", err)
 		os.Exit(1)
-	}
-	if cfg.AllowInsecureNoAuth {
-		slog.Warn("⚠️  RUNNING WITHOUT AUTHENTICATION — this is intended for local development only. Set OJS_API_KEY for any shared or production environment.")
 	}
 
 	// Initialize OpenTelemetry (opt-in via OJS_OTEL_ENABLED or OTEL_EXPORTER_OTLP_ENDPOINT)
