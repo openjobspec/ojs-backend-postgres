@@ -364,3 +364,79 @@ func TestIntegration_Subscribe(t *testing.T) {
 		t.Error("timed out waiting for notification")
 	}
 }
+
+// TestIntegration_ConcurrentFetch_NoDuplicates verifies that concurrent workers
+// fetching from the same queue never receive the same job. This validates the
+// SKIP LOCKED dequeue strategy under contention.
+func TestIntegration_ConcurrentFetch_NoDuplicates(t *testing.T) {
+backend := setupTestBackend(t)
+ctx := context.Background()
+
+const jobCount = 20
+const workerCount = 5
+
+// Push N jobs
+for i := 0; i < jobCount; i++ {
+job := &core.Job{
+Type:  "concurrent.test",
+Queue: "concurrent-q",
+Args:  json.RawMessage(`["` + time.Now().Format(time.RFC3339Nano) + `"]`),
+}
+if _, err := backend.Push(ctx, job); err != nil {
+t.Fatalf("Push job %d: %v", i, err)
+}
+}
+
+// Launch N workers concurrently, each fetching 1 job at a time
+type result struct {
+workerID string
+jobIDs   []string
+err      error
+}
+
+results := make(chan result, workerCount)
+for w := 0; w < workerCount; w++ {
+go func(workerID string) {
+var ids []string
+for {
+fetched, err := backend.Fetch(ctx, []string{"concurrent-q"}, 1, workerID, 30000)
+if err != nil {
+results <- result{workerID: workerID, err: err}
+return
+}
+if len(fetched) == 0 {
+break
+}
+for _, j := range fetched {
+ids = append(ids, j.ID)
+// Ack immediately so the job doesn't block
+_, _ = backend.Ack(ctx, j.ID, nil)
+}
+}
+results <- result{workerID: workerID, jobIDs: ids}
+}("worker-" + time.Now().Format("150405") + "-" + string(rune('A'+w)))
+}
+
+// Collect all fetched job IDs
+allJobIDs := make(map[string]string) // jobID → workerID
+totalFetched := 0
+for i := 0; i < workerCount; i++ {
+r := <-results
+if r.err != nil {
+t.Fatalf("worker %s error: %v", r.workerID, r.err)
+}
+for _, id := range r.jobIDs {
+if prevWorker, exists := allJobIDs[id]; exists {
+t.Errorf("DUPLICATE: job %s fetched by both %s and %s", id, prevWorker, r.workerID)
+}
+allJobIDs[id] = r.workerID
+}
+totalFetched += len(r.jobIDs)
+}
+
+if totalFetched != jobCount {
+t.Errorf("total fetched = %d, want %d (some jobs lost or duplicated)", totalFetched, jobCount)
+}
+
+t.Logf("Concurrent dequeue: %d jobs distributed across %d workers, 0 duplicates", totalFetched, workerCount)
+}
