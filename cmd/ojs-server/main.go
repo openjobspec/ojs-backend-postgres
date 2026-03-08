@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"log/slog"
+	"net"
 	"net/http"
 	"net/url"
 	"os"
@@ -12,9 +13,14 @@ import (
 	ojsotel "github.com/openjobspec/ojs-go-backend-common/otel"
 
 	"github.com/openjobspec/ojs-backend-postgres/internal/core"
+	ojsgrpc "github.com/openjobspec/ojs-backend-postgres/internal/grpc"
 	pgbackend "github.com/openjobspec/ojs-backend-postgres/internal/postgres"
 	"github.com/openjobspec/ojs-backend-postgres/internal/scheduler"
 	"github.com/openjobspec/ojs-backend-postgres/internal/server"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/health"
+	healthpb "google.golang.org/grpc/health/grpc_health_v1"
+	"google.golang.org/grpc/reflection"
 )
 
 func main() {
@@ -76,8 +82,12 @@ func main() {
 	sched.Start()
 	defer sched.Stop()
 
-	// Create HTTP server
-	router := server.NewRouter(backend, cfg)
+	// Initialize event broker for real-time SSE/WebSocket/gRPC streaming
+	broker := pgbackend.NewEventPubSubBroker()
+	defer broker.Close()
+
+	// Create HTTP server with real-time events
+	router := server.NewRouterWithRealtime(backend, cfg, broker, broker)
 	srv := &http.Server{
 		Addr:         ":" + cfg.Port,
 		Handler:      router,
@@ -86,11 +96,32 @@ func main() {
 		IdleTimeout:  cfg.IdleTimeout,
 	}
 
-	// Start server
+	// Start HTTP server
 	go func() {
-		slog.Info("OJS server listening", "port", cfg.Port)
+		slog.Info("OJS HTTP server listening", "port", cfg.Port)
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			slog.Error("server error", "error", err)
+			slog.Error("HTTP server error", "error", err)
+			os.Exit(1)
+		}
+	}()
+
+	// Start gRPC server
+	grpcServer := grpc.NewServer()
+	ojsgrpc.Register(grpcServer, backend, ojsgrpc.WithEventSubscriber(broker))
+	healthSrv := health.NewServer()
+	healthpb.RegisterHealthServer(grpcServer, healthSrv)
+	healthSrv.SetServingStatus("ojs.v1.OJSService", healthpb.HealthCheckResponse_SERVING)
+	reflection.Register(grpcServer)
+
+	go func() {
+		lis, err := net.Listen("tcp", ":"+cfg.GRPCPort)
+		if err != nil {
+			slog.Error("failed to listen for gRPC", "port", cfg.GRPCPort, "error", err)
+			os.Exit(1)
+		}
+		slog.Info("OJS gRPC server listening", "port", cfg.GRPCPort)
+		if err := grpcServer.Serve(lis); err != nil {
+			slog.Error("gRPC server error", "error", err)
 			os.Exit(1)
 		}
 	}()
@@ -105,6 +136,7 @@ func main() {
 	ctx, cancel := context.WithTimeout(context.Background(), cfg.ShutdownTimeout)
 	defer cancel()
 
+	grpcServer.GracefulStop()
 	if err := srv.Shutdown(ctx); err != nil {
 		slog.Error("server shutdown error", "error", err)
 	}

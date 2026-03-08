@@ -73,7 +73,7 @@ func (b *Backend) Ack(ctx context.Context, jobID string, result []byte) (*core.A
 
 	return &core.AckResponse{
 		Acknowledged: true,
-		JobID:        jobID,
+		ID:        jobID,
 		State:        core.StateCompleted,
 		CompletedAt:  core.FormatTime(now),
 		Job:          job,
@@ -131,7 +131,7 @@ func (b *Backend) Nack(ctx context.Context, jobID string, jobErr *core.JobError,
 
 		job, _ := b.Info(ctx, jobID)
 		return &core.NackResponse{
-			JobID:       jobID,
+			ID:       jobID,
 			State:       core.StateAvailable,
 			Attempt:     attempt,
 			MaxAttempts: maxAttempts,
@@ -225,7 +225,7 @@ func (b *Backend) Nack(ctx context.Context, jobID string, jobErr *core.JobError,
 
 		job, _ := b.Info(ctx, jobID)
 		return &core.NackResponse{
-			JobID:       jobID,
+			ID:       jobID,
 			State:       core.StateDiscarded,
 			Attempt:     newAttempt,
 			MaxAttempts: maxAttempts,
@@ -268,7 +268,7 @@ func (b *Backend) Nack(ctx context.Context, jobID string, jobErr *core.JobError,
 		}))
 
 	return &core.NackResponse{
-		JobID:         jobID,
+		ID:         jobID,
 		State:         core.StateRetryable,
 		Attempt:       newAttempt,
 		MaxAttempts:   maxAttempts,
