@@ -4,7 +4,7 @@ Thank you for your interest in contributing! This guide will help you get starte
 
 ## Prerequisites
 
-- Go 1.22+
+- Go 1.24+
 - PostgreSQL 15+ (or Docker)
 - Make
 
