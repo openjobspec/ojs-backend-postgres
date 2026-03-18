@@ -110,7 +110,9 @@ func (b *Backend) handleUniqueConflict(ctx context.Context, conflict, fingerprin
 		}
 		return nil, err
 	case "replace":
-		_, _ = b.Cancel(ctx, existingID)
+		if _, cancelErr := b.Cancel(ctx, existingID); cancelErr != nil {
+			slog.Warn("failed to cancel existing job during unique replace", "existing_job_id", existingID, "error", cancelErr)
+		}
 		return nil, nil // signal caller to proceed with insert below
 	default:
 		return nil, &core.OJSError{

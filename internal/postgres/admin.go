@@ -55,6 +55,9 @@ func (b *Backend) ListJobs(ctx context.Context, filters core.JobListFilters, lim
 		}
 		jobs = append(jobs, job)
 	}
+	if err := rows.Err(); err != nil {
+		return nil, 0, fmt.Errorf("iterate job rows: %w", err)
+	}
 
 	return jobs, total, nil
 }
@@ -88,6 +91,9 @@ func (b *Backend) ListWorkers(ctx context.Context, limit, offset int) ([]*core.W
 			w.State = "running"
 		}
 		workers = append(workers, w)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, core.WorkerSummary{}, fmt.Errorf("iterate worker rows: %w", err)
 	}
 
 	var summary core.WorkerSummary

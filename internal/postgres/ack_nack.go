@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"time"
 
 	ojsotel "github.com/openjobspec/ojs-go-backend-common/otel"
@@ -65,7 +66,10 @@ func (b *Backend) Ack(ctx context.Context, jobID string, result []byte) (*core.A
 	// Advance workflow if applicable
 	b.advanceWorkflowForJob(ctx, jobID, core.StateCompleted, result)
 
-	job, _ := b.Info(ctx, jobID)
+	job, infoErr := b.Info(ctx, jobID)
+	if infoErr != nil {
+		slog.Warn("failed to fetch job after ack", "job_id", jobID, "error", infoErr)
+	}
 
 	b.DeleteCheckpoint(ctx, jobID)
 	b.RecordEvent(ctx, core.NewHistoryEvent(jobID, core.HistoryEventAttemptCompleted,
@@ -129,7 +133,10 @@ func (b *Backend) Nack(ctx context.Context, jobID string, jobErr *core.JobError,
 
 		notifyJobAvailable(ctx, b.pool, queue)
 
-		job, _ := b.Info(ctx, jobID)
+		job, infoErr := b.Info(ctx, jobID)
+		if infoErr != nil {
+			slog.Warn("failed to fetch job after requeue", "job_id", jobID, "error", infoErr)
+		}
 		return &core.NackResponse{
 			ID:       jobID,
 			State:       core.StateAvailable,
@@ -160,7 +167,10 @@ func (b *Backend) Nack(ctx context.Context, jobID string, jobErr *core.JobError,
 		if jobErr.Details != nil {
 			errObj["details"] = jobErr.Details
 		}
-		errJSON, _ = json.Marshal(errObj)
+		errJSON, err = json.Marshal(errObj)
+		if err != nil {
+			errJSON = []byte(`{"message":"error serialization failed"}`)
+		}
 	}
 
 	// Check if error is non-retryable
@@ -223,7 +233,10 @@ func (b *Backend) Nack(ctx context.Context, jobID string, jobErr *core.JobError,
 
 		b.advanceWorkflowForJob(ctx, jobID, core.StateDiscarded, nil)
 
-		job, _ := b.Info(ctx, jobID)
+		job, infoErr := b.Info(ctx, jobID)
+		if infoErr != nil {
+			slog.Warn("failed to fetch job after discard", "job_id", jobID, "error", infoErr)
+		}
 		return &core.NackResponse{
 			ID:       jobID,
 			State:       core.StateDiscarded,
@@ -256,7 +269,10 @@ func (b *Backend) Nack(ctx context.Context, jobID string, jobErr *core.JobError,
 		return nil, fmt.Errorf("retry job: %w", err)
 	}
 
-	job, _ := b.Info(ctx, jobID)
+	job, infoErr := b.Info(ctx, jobID)
+	if infoErr != nil {
+		slog.Warn("failed to fetch job after retry", "job_id", jobID, "error", infoErr)
+	}
 
 	errMsg := ""
 	if jobErr != nil {
@@ -286,6 +302,8 @@ func (b *Backend) advanceWorkflowForJob(ctx context.Context, jobID, state string
 	}
 
 	failed := state == core.StateDiscarded || state == core.StateCancelled
-	_ = b.AdvanceWorkflow(ctx, *workflowID, jobID, json.RawMessage(result), failed)
+	if err := b.AdvanceWorkflow(ctx, *workflowID, jobID, json.RawMessage(result), failed); err != nil {
+		slog.Warn("failed to advance workflow", "workflow_id", *workflowID, "job_id", jobID, "error", err)
+	}
 }
 

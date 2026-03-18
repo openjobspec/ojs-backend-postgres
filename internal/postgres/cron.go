@@ -128,6 +128,9 @@ func (b *Backend) ListCron(ctx context.Context) ([]*core.CronJob, error) {
 
 		crons = append(crons, cj)
 	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate cron rows: %w", err)
+	}
 	return crons, nil
 }
 
@@ -217,6 +220,9 @@ func (b *Backend) FireCronJobs(ctx context.Context) error {
 		entries = append(entries, e)
 	}
 	rows.Close()
+	if err := rows.Err(); err != nil {
+		return fmt.Errorf("iterate cron entries: %w", err)
+	}
 
 	for _, e := range entries {
 		// Check overlap policy

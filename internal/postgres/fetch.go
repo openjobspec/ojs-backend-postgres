@@ -83,6 +83,10 @@ func (b *Backend) Fetch(ctx context.Context, queues []string, count int, workerI
 		}
 		rows.Close()
 
+		if err := rows.Err(); err != nil {
+			return nil, fmt.Errorf("iterate fetched jobs: %w", err)
+		}
+
 		// Discard expired jobs that were skipped
 		b.logExec(ctx, "discard-expired", `
 			UPDATE ojs_jobs SET state = 'discarded'

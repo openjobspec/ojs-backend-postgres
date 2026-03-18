@@ -185,13 +185,18 @@ func (b *Backend) CancelWorkflow(ctx context.Context, id string) (*core.Workflow
 			}
 			jobIDs = append(jobIDs, jobID)
 		}
+		if rowsErr := rows.Err(); rowsErr != nil {
+			return nil, fmt.Errorf("iterate workflow job rows: %w", rowsErr)
+		}
 	}
 
 	for _, jobID := range jobIDs {
 		var jobState string
 		if b.pool.QueryRow(ctx, "SELECT state FROM ojs_jobs WHERE id = $1", jobID).Scan(&jobState) == nil {
 			if !core.IsTerminalState(jobState) {
-				_, _ = b.Cancel(ctx, jobID)
+				if _, cancelErr := b.Cancel(ctx, jobID); cancelErr != nil {
+					slog.Warn("failed to cancel workflow job", "workflow_id", id, "job_id", jobID, "error", cancelErr)
+				}
 			}
 		}
 	}

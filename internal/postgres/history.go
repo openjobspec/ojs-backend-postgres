@@ -114,6 +114,9 @@ func (b *Backend) GetJobHistory(ctx context.Context, jobID string, limit int, cu
 		events = append(events, event)
 		count++
 	}
+	if err := pgRows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate history rows: %w", err)
+	}
 
 	_ = rows
 
@@ -152,6 +155,9 @@ func (b *Backend) GetJobLineage(ctx context.Context, jobID string) (*core.JobLin
 			if rows.Scan(&childID) == nil {
 				lineage.Children = append(lineage.Children, core.JobLineage{JobID: childID})
 			}
+		}
+		if rowsErr := rows.Err(); rowsErr != nil {
+			return nil, fmt.Errorf("iterate lineage rows: %w", rowsErr)
 		}
 	}
 

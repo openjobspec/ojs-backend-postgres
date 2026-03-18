@@ -26,6 +26,9 @@ func (b *Backend) ListQueues(ctx context.Context) ([]core.QueueInfo, error) {
 			Status: status,
 		})
 	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate queue rows: %w", err)
+	}
 	return queues, nil
 }
 

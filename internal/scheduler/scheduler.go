@@ -3,6 +3,7 @@ package scheduler
 import (
 	"context"
 	"log/slog"
+	"sync"
 	"time"
 )
 
@@ -37,9 +38,10 @@ func DefaultConfig() Config {
 
 // Scheduler runs background tasks for the OJS server.
 type Scheduler struct {
-	backend Backend
-	config  Config
-	stop    chan struct{}
+	backend  Backend
+	config   Config
+	stop     chan struct{}
+	stopOnce sync.Once
 }
 
 // New creates a new Scheduler with the given config.
@@ -60,9 +62,9 @@ func (s *Scheduler) Start() {
 	go s.runLoop("job-pruner", s.config.PrunerInterval, s.backend.PruneOldJobs)
 }
 
-// Stop signals all background goroutines to stop.
+// Stop signals all background goroutines to stop. Safe to call multiple times.
 func (s *Scheduler) Stop() {
-	close(s.stop)
+	s.stopOnce.Do(func() { close(s.stop) })
 }
 
 func (s *Scheduler) runLoop(name string, interval time.Duration, fn func(context.Context) error) {

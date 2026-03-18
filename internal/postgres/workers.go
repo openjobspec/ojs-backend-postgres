@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"time"
 
 	"github.com/openjobspec/ojs-backend-postgres/internal/core"
@@ -31,7 +32,11 @@ func (b *Backend) Heartbeat(ctx context.Context, workerID string, activeJobs []s
 		tag, err := b.pool.Exec(ctx,
 			"UPDATE ojs_jobs SET visibility_timeout = $1 WHERE id = $2 AND state = 'active'",
 			visDeadline, jobID)
-		if err == nil && tag.RowsAffected() > 0 {
+		if err != nil {
+			slog.Warn("failed to extend visibility timeout", "job_id", jobID, "worker_id", workerID, "error", err)
+			continue
+		}
+		if tag.RowsAffected() > 0 {
 			extended = append(extended, jobID)
 		}
 	}
