@@ -1,4 +1,5 @@
 # ojs-backend-postgres
+[![Stability: stable](https://img.shields.io/badge/stability-stable-brightgreen.svg)](https://github.com/openjobspec/openjobspec/blob/main/STABILITY.md)
 
 [![CI](https://github.com/openjobspec/ojs-backend-postgres/actions/workflows/ci.yml/badge.svg)](https://github.com/openjobspec/ojs-backend-postgres/actions/workflows/ci.yml)
 ![Conformance](https://github.com/openjobspec/ojs-backend-postgres/raw/main/.github/badges/conformance.svg)
