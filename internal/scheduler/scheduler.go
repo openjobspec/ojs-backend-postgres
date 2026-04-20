@@ -41,6 +41,7 @@ type Scheduler struct {
 	backend  Backend
 	config   Config
 	stop     chan struct{}
+	wg       sync.WaitGroup
 	stopOnce sync.Once
 }
 
@@ -55,6 +56,7 @@ func New(backend Backend, cfg Config) *Scheduler {
 
 // Start begins all background scheduling goroutines.
 func (s *Scheduler) Start() {
+	s.wg.Add(5)
 	go s.runLoop("scheduled-promoter", s.config.PromoteInterval, s.backend.PromoteScheduled)
 	go s.runLoop("retry-promoter", s.config.RetryInterval, s.backend.PromoteRetries)
 	go s.runLoop("stalled-reaper", s.config.ReaperInterval, s.backend.RequeueStalled)
@@ -62,12 +64,15 @@ func (s *Scheduler) Start() {
 	go s.runLoop("job-pruner", s.config.PrunerInterval, s.backend.PruneOldJobs)
 }
 
-// Stop signals all background goroutines to stop. Safe to call multiple times.
+// Stop signals all background goroutines to stop and waits for them to finish.
+// Safe to call multiple times.
 func (s *Scheduler) Stop() {
 	s.stopOnce.Do(func() { close(s.stop) })
+	s.wg.Wait()
 }
 
 func (s *Scheduler) runLoop(name string, interval time.Duration, fn func(context.Context) error) {
+	defer s.wg.Done()
 	ticker := time.NewTicker(interval)
 	defer ticker.Stop()
 
@@ -77,10 +82,10 @@ func (s *Scheduler) runLoop(name string, interval time.Duration, fn func(context
 			return
 		case <-ticker.C:
 			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-			defer cancel()
 			if err := fn(ctx); err != nil {
 				slog.Error("scheduler loop error", "loop", name, "error", err)
 			}
+			cancel()
 		}
 	}
 }
