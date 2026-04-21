@@ -153,7 +153,11 @@ func (b *Backend) insertJob(ctx context.Context, job *core.Job, now time.Time, u
 
 	var retryPolicyJSON []byte
 	if job.Retry != nil {
-		retryPolicyJSON, _ = json.Marshal(job.Retry)
+		var err error
+		retryPolicyJSON, err = json.Marshal(job.Retry)
+		if err != nil {
+			slog.Warn("push: failed to marshal retry policy", "job_id", job.ID, "error", err)
+		}
 	}
 
 	var expiresAt *time.Time
@@ -165,7 +169,11 @@ func (b *Backend) insertJob(ctx context.Context, job *core.Job, now time.Time, u
 
 	var unknownFieldsJSON []byte
 	if len(job.UnknownFields) > 0 {
-		unknownFieldsJSON, _ = json.Marshal(job.UnknownFields)
+		var err error
+		unknownFieldsJSON, err = json.Marshal(job.UnknownFields)
+		if err != nil {
+			slog.Warn("push: failed to marshal unknown fields", "job_id", job.ID, "error", err)
+		}
 	}
 
 	var parentResultsBytes [][]byte
@@ -329,7 +337,11 @@ func (b *Backend) PushBatch(ctx context.Context, jobs []*core.Job) ([]*core.Job,
 
 		var retryPolicyJSON []byte
 		if job.Retry != nil {
-			retryPolicyJSON, _ = json.Marshal(job.Retry)
+			var err error
+			retryPolicyJSON, err = json.Marshal(job.Retry)
+			if err != nil {
+				slog.Warn("batch push: failed to marshal retry policy", "job_id", job.ID, "error", err)
+			}
 		}
 
 		var argsJSON []byte
@@ -348,7 +360,11 @@ func (b *Backend) PushBatch(ctx context.Context, jobs []*core.Job) ([]*core.Job,
 
 		var unknownFieldsJSON []byte
 		if len(job.UnknownFields) > 0 {
-			unknownFieldsJSON, _ = json.Marshal(job.UnknownFields)
+			var err error
+			unknownFieldsJSON, err = json.Marshal(job.UnknownFields)
+			if err != nil {
+				slog.Warn("batch push: failed to marshal unknown fields", "job_id", job.ID, "error", err)
+			}
 		}
 
 		_, err := tx.Exec(ctx, `

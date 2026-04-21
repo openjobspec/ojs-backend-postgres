@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"time"
 
 	"github.com/robfig/cron/v3"
@@ -59,7 +60,10 @@ func (b *Backend) RegisterCron(ctx context.Context, cronJob *core.CronJob) (*cor
 	}
 	cronJob.Enabled = true
 
-	templateJSON, _ := json.Marshal(cronJob.JobTemplate)
+	templateJSON, err := json.Marshal(cronJob.JobTemplate)
+	if err != nil {
+		slog.Warn("register cron: failed to marshal job template", "name", cronJob.Name, "error", err)
+	}
 
 	_, err = b.pool.Exec(ctx, `
 		INSERT INTO ojs_cron_jobs (name, expression, timezone, overlap_policy, enabled, job_template, queue, created_at, next_run_at)

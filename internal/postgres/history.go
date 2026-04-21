@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"time"
 
 	"github.com/openjobspec/ojs-backend-postgres/internal/core"
@@ -17,10 +18,16 @@ func (b *Backend) RecordEvent(ctx context.Context, event *core.HistoryEvent) err
 		actorID = event.Actor.ID
 	}
 
-	dataJSON, _ := json.Marshal(event.Data)
-	metaJSON, _ := json.Marshal(event.Metadata)
+	dataJSON, err := json.Marshal(event.Data)
+	if err != nil {
+		slog.Warn("history: failed to marshal event data", "job_id", event.JobID, "error", err)
+	}
+	metaJSON, err := json.Marshal(event.Metadata)
+	if err != nil {
+		slog.Warn("history: failed to marshal event metadata", "job_id", event.JobID, "error", err)
+	}
 
-	_, err := b.pool.Exec(ctx, `
+	_, err = b.pool.Exec(ctx, `
 		INSERT INTO ojs_job_history (id, job_id, event_type, timestamp, actor_type, actor_id, data, metadata)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 		ON CONFLICT DO NOTHING`,

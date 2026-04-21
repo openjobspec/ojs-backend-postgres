@@ -40,14 +40,20 @@ func (b *Backend) CreateWorkflow(ctx context.Context, req *core.WorkflowRequest)
 		wf.JobsCompleted = &zero
 	}
 
-	jobDefsJSON, _ := json.Marshal(jobs)
+	jobDefsJSON, err := json.Marshal(jobs)
+	if err != nil {
+		slog.Warn("create workflow: failed to marshal job definitions", "error", err)
+	}
 	var callbacksJSON []byte
 	if req.Callbacks != nil {
-		callbacksJSON, _ = json.Marshal(req.Callbacks)
+		callbacksJSON, err = json.Marshal(req.Callbacks)
+		if err != nil {
+			slog.Warn("create workflow: failed to marshal callbacks", "error", err)
+		}
 	}
 
 	// Insert the workflow row
-	_, err := b.pool.Exec(ctx, `
+	_, err = b.pool.Exec(ctx, `
 		INSERT INTO ojs_workflows (id, name, type, state, total, completed, failed, job_defs, callbacks, created_at)
 		VALUES ($1, $2, $3, $4, $5, 0, 0, $6, $7, $8)`,
 		wfID, req.Name, req.Type, "running", total, jobDefsJSON, callbacksJSON, now)
